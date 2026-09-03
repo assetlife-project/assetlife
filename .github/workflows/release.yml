@@ -1,0 +1,36 @@
+name: Publish to PyPi
+on:
+  release:
+    types: [published]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: '3.11'
+      - run: uv build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+  pypi-publish:
+    needs: build
+    runs-on: ubuntu-latest
+    name: upload release to PyPI
+    # Specifying a GitHub environment is optional, but strongly encouraged
+    environment:
+      name: pypi
+      url: https://pypi.org/p/assetlife
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv publish
+
