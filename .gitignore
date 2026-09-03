@@ -1,0 +1,38 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# ruff-generated files
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# docs
+docs/_build/
+docs/build/
+# exclude all api doc files, except index.rst
+docs/source/api/*
+!docs/source/api/index.rst
+
+# Pycharm
+.idea/
+
+# VSCode
+.vscode/
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+
+# uv
+uv.toml
