@@ -1,0 +1,13 @@
+[project]
+name = "assetlife"
+version = "0.1.0"
+description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
+readme = "README.md"
+authors = [{name = "Thomas Guillon et al."}]
+maintainers = [{name = "AssetLife Developers"}]
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
