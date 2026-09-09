@@ -22,6 +22,7 @@ build-backend = "setuptools.build_meta"
 [dependency-groups]
 extra = [
     "jupyterlab>=4.6.3",
+    "pandas>=2.3.3",
 ]
 doc = [
 	{ include-group = "extra" },
