@@ -1,8 +1,8 @@
 <h1 align="center">
 <img src="https://github.com/lf-energy/artwork/blob/main/projects/assetlife/horizontal/color/assetlife-horizontal-color.svg" width="300">
-</h1><br>
+</h1>
 
-<p align="center"><strong>Stochastic modeling to guide decision-making in asset management</strong></p>
+<p align="center"><strong>Stochastic modeling to guide decision-making in asset management</strong></p><br>
 
 - **Documentation:** https://assetlife.org
 - **Source code:** https://github.com/assetlife-project/assetlife
