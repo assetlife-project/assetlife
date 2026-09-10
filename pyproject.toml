@@ -1,6 +1,6 @@
 [project]
 name = "assetlife"
-version = "0.1.1.dev1"
+version = "0.1.1"
 description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
 readme = "README.md"
 authors = [{name = "Thomas Guillon et al."}]
