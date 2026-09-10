@@ -1,6 +1,6 @@
 [project]
 name = "assetlife"
-version = "0.1.0"
+version = "0.1.1.dev1"
 description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
 readme = "README.md"
 authors = [{name = "Thomas Guillon et al."}]
@@ -22,6 +22,7 @@ build-backend = "setuptools.build_meta"
 [dependency-groups]
 extra = [
     "jupyterlab>=4.6.3",
+    "pandas>=2.3.3",
 ]
 doc = [
 	{ include-group = "extra" },
