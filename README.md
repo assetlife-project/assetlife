@@ -2,7 +2,28 @@
 <img src="https://raw.githubusercontent.com/lf-energy/artwork/refs/heads/main/projects/assetlife/horizontal/color/assetlife-horizontal-color.svg" width="300">
 </h1>
 
-<p align="center"><strong>Stochastic modeling to guide decision-making in asset management</strong></p><br>
+<p align="center"><strong>Stochastic modeling to guide decision-making in asset management</strong></p>
+
+<p align="center">
+  <a href="https://github.com/assetlife-project/assetlife">
+    <img
+      alt="GitHub License"
+      src="https://img.shields.io/github/license/assetlife-project/assetlife?style=flat"
+    >
+  </a>
+  <a href="https://pypi.org/project/assetlife/">
+    <img
+      alt="PyPI Version"
+      src="https://img.shields.io/pypi/v/assetlife"
+    >
+  </a>
+  <a href="https://github.com/assetlife-project/assetlife">
+    <img
+      alt="Python Versions"
+      src="https://img.shields.io/pypi/pyversions/assetlife"
+    >
+  </a>
+</p>
 
 - **Documentation:** https://assetlife.org
 - **Source code:** https://github.com/assetlife-project/assetlife
