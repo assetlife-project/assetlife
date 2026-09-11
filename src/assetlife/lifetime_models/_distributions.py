@@ -10,19 +10,13 @@ from typing import (
     Self,
     final,
 )
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy.optimize import Bounds
 from scipy.special import digamma, exp1, gamma, gammaincc, gammainccinv
-from typing_extensions import override
-
-from assetlife.base import FitConfig, FittingResults
-from assetlife.quadratures import (
-    laguerre_quadrature,
-)
-from assetlife.typing import CoercibleFloat64_ND, Float64_ND
 
 from ._base import (
     FittableParametricLifetimeModel,
@@ -31,6 +25,11 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
+from assetlife.base import FitConfig, FittingResults
+from assetlife.quadratures import (
+    laguerre_quadrature,
+)
+from assetlife.typing import CoercibleFloat64_ND, Float64_ND
 
 
 class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
@@ -165,9 +164,10 @@ def init_distrib_params_from_lifetimes(
     model: LifetimeDistribution, data: LifetimeData
 ) -> onp.Array1D[np.float64]:
     # flatten censored_time in case it is 2D
-    all_time_values = np.concatenate(
-        (data.complete_time.flatten(), data.censored_time.flatten())
-    )
+    all_time_values = np.concatenate((
+        data.complete_time.flatten(),
+        data.censored_time.flatten(),
+    ))
     nb_params = model.get_params().size
     if isinstance(model, Gompertz):
         param0 = np.empty(nb_params, dtype=np.float64)

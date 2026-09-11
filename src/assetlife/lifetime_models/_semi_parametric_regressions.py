@@ -1,14 +1,13 @@
 from collections.abc import Sequence
 from typing import Any, Literal, NamedTuple, final
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
-from typing_extensions import override
-
-from assetlife.base import FitConfig, FittingResults, MaximumLikelihoodOptimizer
-from assetlife.typing import CoercibleFloat64_1D
 
 from ._parametric_regressions import LinearCovarEffect
+from assetlife.base import FitConfig, FittingResults, MaximumLikelihoodOptimizer
+from assetlife.typing import CoercibleFloat64_1D
 
 
 class CoxData:
@@ -319,7 +318,8 @@ class EfronPartialLifetimeLikelihood(CoxPartialLifetimeLikelihood):
         m = self._psi_efron()
         neg_L = -(
             np.log(self.model.g(*np.unstack(self.s_j, axis=-1))).sum()
-            - np.log(m, out=np.zeros_like(m), where=(m != 0))
+            - np
+            .log(m, out=np.zeros_like(m), where=(m != 0))
             .sum(axis=1, keepdims=True)
             .sum()
         )
@@ -337,7 +337,8 @@ class EfronPartialLifetimeLikelihood(CoxPartialLifetimeLikelihood):
         b = self._psi_efron()[:, :, None]
         return -(
             self.s_j.sum(axis=0)
-            - np.divide(a, b, out=np.zeros_like(a), where=(b != 0))
+            - np
+            .divide(a, b, out=np.zeros_like(a), where=(b != 0))
             .sum(axis=1)
             .sum(axis=0)
         )

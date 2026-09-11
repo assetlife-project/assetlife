@@ -14,12 +14,12 @@ from typing import (
     TypeVar,
     final,
 )
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 from scipy import stats
 from scipy.optimize import approx_fprime, minimize
-from typing_extensions import override
 
 __all__ = ["FitConfig", "MaximumLikelihoodOptimizer", "ParametricModel"]
 
@@ -68,7 +68,7 @@ class _Parameters:
             self._values = list(values)
         else:
             self._set_values_from(
-                iter(values)
+                iter(values),
             )  # consume values to update _values and leaf _values
 
     def _set_values_from(self, iterator: Iterator[float | None]) -> None:
@@ -91,7 +91,7 @@ class ParametricModel:
     ...     def __init__(self, a, b):
     ...         super().__init__(a, b)
     >>> class ModelB(ParametricModel):
-    ...     def __init__(self, baseline : ModelA):
+    ...     def __init__(self, baseline: ModelA):
     ...         super().__init__()
     ...         self.baseline = baseline
     >>> model_a = ModelA(1, 2)
@@ -174,24 +174,27 @@ class FittingResults:
     optimal_params: onp.Array1D[np.float64]  #: Optimal parameter values
     success: bool  #: Whether or not the optimizer exited successfully.
     neg_log_likelihood: float = field(
-        repr=False
+        repr=False,
     )  #: Negative log likelihood value at optimal parameter values
 
     covariance_matrix: onp.Array2D[np.float64] | None = field(
-        repr=False, default=None
+        repr=False,
+        default=None,
     )  #: Covariance matrix (computed as the inverse of the Hessian matrix).
 
     nb_params: int = field(init=False, repr=False)  #: Number of parameters.
     aic: float = field(init=False)  #: Akaike Information Criterion.
     aicc: float = field(
-        init=False
+        init=False,
     )  #: Akaike Information Criterion with a correction for small sample sizes.
     bic: float = field(init=False)  #: Bayesian Information Criterion.
     se: onp.Array1D[np.float64] | None = field(
-        init=False, repr=False
+        init=False,
+        repr=False,
     )  #: Standard error, square root of the diagonal of the covariance matrix
     ic: onp.Array[tuple[int, Literal[2]], np.float64] | None = field(
-        init=False, repr=False
+        init=False,
+        repr=False,
     )  #: 95% IC
 
     def __post_init__(self):
@@ -207,9 +210,10 @@ class FittingResults:
         self.ic = None
         if self.covariance_matrix is not None:
             self.se = np.sqrt(np.diag(self.covariance_matrix))
-            self.ic = self.optimal_params.reshape(-1, 1) + stats.norm.ppf(
-                (0.05, 0.95)
-            ) * self.se.reshape(-1, 1) / np.sqrt(self.nb_observations)  # (p, 2)
+            self.ic = self.optimal_params.reshape(-1, 1) + stats.norm.ppf((
+                0.05,
+                0.95,
+            )) * self.se.reshape(-1, 1) / np.sqrt(self.nb_observations)  # (p, 2)
 
     @override
     def __str__(self) -> str:
@@ -341,7 +345,7 @@ class MaximumLikelihoodOptimizer(Generic[M, D], ABC):
             )
         if hess is not None and self.config.covariance_method == "exact":
             fitting_results.covariance_matrix = np.linalg.pinv(
-                hess(fitting_results.optimal_params)
+                hess(fitting_results.optimal_params),
             )
         return fitting_results
 
