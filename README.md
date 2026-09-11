@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="https://github.com/lf-energy/artwork/blob/main/projects/assetlife/horizontal/color/assetlife-horizontal-color.svg" width="300">
+<img src="https://raw.githubusercontent.com/lf-energy/artwork/refs/heads/main/projects/assetlife/horizontal/color/assetlife-horizontal-color.svg" width="300">
 </h1>
 
 <p align="center"><strong>Stochastic modeling to guide decision-making in asset management</strong></p><br>
