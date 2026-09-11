@@ -10,6 +10,13 @@ from typing import (
 import numpy as np
 import optype.numpy as onp
 
+from ._iterables import (
+    Kijima1ProcessIterable,
+    Kijima2ProcessIterable,
+    NonHomogeneousPoissonProcessIterable,
+    RenewalProcessIterable,
+    RenewalRewardProcessIterable,
+)
 from assetlife.stochastic_processes import (
     Kijima1Process,
     Kijima2Process,
@@ -18,14 +25,6 @@ from assetlife.stochastic_processes import (
     RenewalRewardProcess,
 )
 from assetlife.typing import CoercibleFloat64_1D, Seed
-
-from ._iterables import (
-    Kijima1ProcessIterable,
-    Kijima2ProcessIterable,
-    NonHomogeneousPoissonProcessIterable,
-    RenewalProcessIterable,
-    RenewalRewardProcessIterable,
-)
 
 
 class StochasticSample(NamedTuple):

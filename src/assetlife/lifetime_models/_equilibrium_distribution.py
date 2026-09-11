@@ -1,14 +1,13 @@
 from typing import final
+from typing_extensions import override
 
 import numpy as np
 from optype.numpy import ArrayND
 from scipy.optimize import newton
-from typing_extensions import override
-
-from assetlife.quadratures import legendre_quadrature
-from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
 from ._base import ParametricLifetimeModel
+from assetlife.quadratures import legendre_quadrature
+from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
 
 @final

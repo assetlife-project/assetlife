@@ -18,6 +18,7 @@ from typing import (
     no_type_check,
     overload,
 )
+from typing_extensions import override
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,7 +27,6 @@ from matplotlib.axes import Axes
 from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy import stats
 from scipy.optimize import newton
-from typing_extensions import override
 
 from assetlife.base import FitConfig, MaximumLikelihoodOptimizer, ParametricModel
 from assetlife.quadratures import legendre_quadrature, unweighted_laguerre_quadrature

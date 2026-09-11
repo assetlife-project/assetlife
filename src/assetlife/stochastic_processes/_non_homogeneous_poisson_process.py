@@ -6,10 +6,10 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import field
 from typing import Any, Generic, Self, no_type_check
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
-from typing_extensions import override
 
 from assetlife.base import FittingResults, ParametricModel
 from assetlife.lifetime_models import (
@@ -149,9 +149,9 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         >>> from assetlife.stochastic_processes import NonHomogeneousPoissonProcess
         >>> nhpp = NonHomogeneousPoissonProcess(Weibull())
         >>> nhpp.fit(
-            np.array([11., 13., 21., 25., 27.]),
-            ("AB2", "CX13", "AB2", "AB2", "CX13"),
-        )
+        ...     np.array([11.0, 13.0, 21.0, 25.0, 27.0]),
+        ...     ("AB2", "CX13", "AB2", "AB2", "CX13"),
+        ... )
 
         With additional information and lifetime model args.
 

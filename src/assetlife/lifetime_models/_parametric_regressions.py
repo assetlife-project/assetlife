@@ -11,15 +11,12 @@ from __future__ import annotations
 from abc import ABC
 from collections.abc import Sequence
 from typing import Any, Literal, Self, final
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy.optimize import Bounds
-from typing_extensions import override
-
-from assetlife.base import FitConfig, FittingResults, ParametricModel
-from assetlife.typing import CoercibleFloat64_ND, Float64_ND
 
 from ._base import (
     FittableParametricLifetimeModel,
@@ -34,6 +31,8 @@ from ._distributions import (
     get_distrib_params_bounds,
     init_distrib_params_from_lifetimes,
 )
+from assetlife.base import FitConfig, FittingResults, ParametricModel
+from assetlife.typing import CoercibleFloat64_ND, Float64_ND
 
 
 class LinearCovarEffect(ParametricModel):
@@ -318,20 +317,16 @@ def init_regression_params_from_lifetimes(
 
 def get_regression_params_bounds(model: ParametricLifetimeRegression) -> Bounds:
     nb_coefficients = model.covar_effect.get_params().size
-    lb = np.concatenate(
-        (
-            np.full(nb_coefficients, -np.inf),
-            get_distrib_params_bounds(
-                model.baseline
-            ).lb,  # baseline has _params_bounds according to typing
-        )
-    )
-    ub = np.concatenate(
-        (
-            np.full(nb_coefficients, np.inf),
-            get_distrib_params_bounds(model.baseline).ub,
-        )
-    )
+    lb = np.concatenate((
+        np.full(nb_coefficients, -np.inf),
+        get_distrib_params_bounds(
+            model.baseline
+        ).lb,  # baseline has _params_bounds according to typing
+    ))
+    ub = np.concatenate((
+        np.full(nb_coefficients, np.inf),
+        get_distrib_params_bounds(model.baseline).ub,
+    ))
     return Bounds(lb, ub)
 
 

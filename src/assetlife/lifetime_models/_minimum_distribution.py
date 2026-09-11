@@ -1,16 +1,15 @@
 from collections.abc import Sequence
 from typing import Any, Literal, Self, final
+from typing_extensions import override
 
 import numpy as np
 from optype.numpy import Array, Array1D, ArrayND
-from typing_extensions import override
-
-from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
 from ._base import (
     FittableParametricLifetimeModel,
     LifetimeLikelihood,
 )
+from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
 
 @final

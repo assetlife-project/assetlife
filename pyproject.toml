@@ -56,3 +56,125 @@ dev = [
 	{ include-group = "test" },
 	{ include-group = "type" },
 ]
+
+# taken from https://github.com/jorenham/optype
+# [based]pyright
+
+[tool.pyright]
+pythonPlatform = "All"
+include = ["src/assetlife"]
+ignore = [".venv"]
+typeCheckingMode = "all"
+enableReachabilityAnalysis = true
+reportAny = false
+reportExplicitAny = false # sometimes there's no way around it
+reportImplicitStringConcatenation = false # not a linter
+reportPrivateUsage = false # dupe of PLC2701
+reportPrivateImportUsage = false # dupe of PLC2701
+reportUnreachable = false # nothing wrong with `if sys.version_info() >= ...`
+reportUnusedCallResult = false # https://github.com/microsoft/pyright/issues/8650
+reportUnusedImport = false # dupe of F401
+reportUnusedVariable = false # dupe of F841
+
+# ruff
+
+[tool.ruff]
+src = ["src"]
+extend-exclude = [".git", ".venv"]
+force-exclude = true
+show-fixes = true
+preview = true
+
+[tool.ruff.format]
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "any-type", # flake8-annotations
+  "assert", # flake8-bandit
+  "FBT", # flake8-boolean-trap
+  "CPY", # flake8-copyright
+  "FIX", # flake8-fixme
+  "D", # pydocstyle
+  "COM812", # conflict with formatter
+  "docstring-missing-returns", # pydoclint
+  "raise-vanilla-args", # tryceratops
+  "non-empty-init-module", # ruff
+]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [
+  "copy",
+  "dataclasses",
+  "inspect",
+  "io",
+  "json",
+  "pickle",
+  "string",
+  "types",
+  "typing",
+]
+
+[tool.ruff.lint.flake8-errmsg]
+max-string-length = 42 # this took a while to figure out
+
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
+"datetime" = "dt"
+"numpy" = "np"
+"numpy.typing" = "npt"
+"optype.numpy" = "onp"
+"optype.typing" = "opt"
+
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = ["collections.abc", "types"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+extra-standard-library = ["_typeshed", "typing_extensions"]
+known-local-folder = ["assetlife"]
+known-third-party = ["numpy"]
+
+[tool.ruff.lint.pylint]
+allow-dunder-method-names = [
+  # methods
+  "__func__",
+  "__objclass__",
+  "__self__",
+  "__wrapped__",
+  # `dlpack`
+  "__dlpack__",
+  "__dlpack_device__",
+  # `numpy` special methods
+  "__array__",
+  "__array_finalize__",
+  "__array_function__",
+  "__array_priority__",
+  "__array_ufunc__",
+  "__array_wrap__",
+  "__array_interface__",
+  "__array_struct__",
+]
+allow-magic-value-types = ["int", "str"]
+
+# pytest
+
+[tool.pytest]
+minversion = "9.0"
+# ignore doctests at the moment
+# only give a whitelist where tests are valid
+testpaths = [
+    "src/assetlife/tests",
+    "src/assetlife/datasets/tests",
+    "src/assetlife/lifetime_models/tests",
+    "src/assetlife/stochastic_processes/tests",
+    "src/assetlife/policies/tests",
+    "src/assetlife/sampling/tests",
+]
+addopts = ["-ra", "--doctest-modules"]
+doctest_optionflags = ["NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL", "ELLIPSIS"]
+filterwarnings = ["error"]
+log_level = "INFO"
+strict = true
+
