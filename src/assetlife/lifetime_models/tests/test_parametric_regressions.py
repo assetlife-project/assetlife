@@ -6,6 +6,7 @@ from numpy.testing import assert_allclose, assert_equal
 from optype.numpy import Array1D, ArrayND
 from scipy.stats import boxcox, zscore
 
+from .utils import generate_shapes, shape_id
 from assetlife.lifetime_models import (
     ParametricAcceleratedFailureTime,
     ParametricProportionalHazard,
@@ -16,8 +17,6 @@ from assetlife.lifetime_models._parametric_regressions import (
     ParametricLifetimeRegression,
 )
 from assetlife.typing import CoercibleFloat64_ND
-
-from .utils import generate_shapes, shape_id
 
 ST: TypeAlias = int | float
 NumpyST: TypeAlias = np.floating | np.uint

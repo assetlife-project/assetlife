@@ -5,12 +5,13 @@ from __future__ import annotations
 import textwrap
 import warnings
 from typing import ParamSpec, TypeVar
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 from scipy.optimize import newton
-from typing_extensions import override
 
+from ._base import BaseAgeReplacementPolicy, OneCycleExpectedCosts
 from assetlife._rewards import discounting_annuity_factor, discounting_factor
 from assetlife.lifetime_models import ParametricLifetimeModel
 from assetlife.quadratures import legendre_quadrature
@@ -20,8 +21,6 @@ from assetlife.stochastic_processes import (
     RenewalRewardProcess,
 )
 from assetlife.typing import CoercibleFloat64_1D, Float64_1D, Timeline
-
-from ._base import BaseAgeReplacementPolicy, OneCycleExpectedCosts
 
 R = TypeVar("R")
 P = ParamSpec("P")

@@ -2,12 +2,13 @@
 
 from abc import ABC, abstractmethod
 from typing import TypeVar, final
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 from numpy.lib import recfunctions as rfn
-from typing_extensions import override
 
+from ._base import StochasticDataIterator
 from assetlife._rewards import compute_rewards, discounting_factor
 from assetlife.lifetime_models._base import (
     ParametricLifetimeModel,
@@ -20,8 +21,6 @@ from assetlife.stochastic_processes import (
 )
 from assetlife.stochastic_processes._renewal_processes import RenewalRewardProcess
 from assetlife.typing import CoercibleFloat64_1D, Seed
-
-from ._base import StochasticDataIterator
 
 
 @final

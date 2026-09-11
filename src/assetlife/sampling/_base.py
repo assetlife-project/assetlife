@@ -6,11 +6,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Generic, TypeVar
+from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 from numpy.lib import recfunctions as rfn
-from typing_extensions import override
 
 from assetlife.lifetime_models import ParametricLifetimeModel
 from assetlife.stochastic_processes import (
@@ -173,15 +173,13 @@ class SampleStep:
         observed_step = time_window.observed_step
         struct_arr = np.zeros(
             observed_step.sum(),
-            dtype=np.dtype(
-                [
-                    ("timeline", np.float64),
-                    ("time", np.float64),
-                    ("event", np.bool_),
-                    ("entry", np.float64),
-                    ("id", np.int64),
-                ]
-            ),
+            dtype=np.dtype([
+                ("timeline", np.float64),
+                ("time", np.float64),
+                ("event", np.bool_),
+                ("entry", np.float64),
+                ("id", np.int64),
+            ]),
         )
 
         struct_arr["timeline"] = time_window.timeline[observed_step]

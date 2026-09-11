@@ -3,10 +3,9 @@ import optype.numpy as onp
 import pytest
 from numpy.testing import assert_allclose
 
+from .utils import generate_shapes, shape_id
 from assetlife.lifetime_models import LifetimeDistribution
 from assetlife.typing import CoercibleFloat64_ND, Float64_ND
-
-from .utils import generate_shapes, shape_id
 
 
 @pytest.mark.parametrize(
