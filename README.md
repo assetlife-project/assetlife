@@ -25,7 +25,7 @@
   </a>
 </p>
 
-- **Documentation:** https://assetlife.org
+- **Documentation:** https://docs.assetlife.org
 - **Source code:** https://github.com/assetlife-project/assetlife
 - **Bug reports:** https://github.com/assetlife-project/assetlife/issues
 
