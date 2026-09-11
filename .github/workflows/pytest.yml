@@ -1,0 +1,29 @@
+name: Pytest tests
+on:
+  push:
+    branches:
+      - main
+      - maintenance/*/**
+      - develop/*/**
+  pull_request:
+    branches:
+      - main
+      - maintenance/*/**
+      - develop/*/**
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install ReLife with dev dependencies
+        run: | 
+          python pip install . --group dev
+
+      - name: Running pytest
+        run: pytest
