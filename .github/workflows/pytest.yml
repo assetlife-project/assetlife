@@ -3,13 +3,13 @@ on:
   push:
     branches:
       - main
-      - maintenance/*/**
-      - develop/*/**
+      - maintenance/**/*
+      - develop/**/*
   pull_request:
     branches:
       - main
-      - maintenance/*/**
-      - develop/*/**
+      - maintenance/**/*
+      - develop/**/*
 jobs:
   build:
     runs-on: ubuntu-latest
