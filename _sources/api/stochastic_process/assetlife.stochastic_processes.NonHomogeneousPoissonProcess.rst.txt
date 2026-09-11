@@ -1,0 +1,48 @@
+﻿
+
+
+
+NonHomogeneousPoissonProcess
+============================
+
+.. currentmodule:: assetlife.stochastic_processes
+
+.. autoclass:: NonHomogeneousPoissonProcess
+    :members:
+    :inherited-members:
+    :exclude-members: __init__, __new__
+    :member-order: alphabetical
+
+    
+    .. rubric:: Methods
+
+    .. autosummary::
+        :nosignatures:
+
+    
+        
+        
+            ~NonHomogeneousPoissonProcess.cumulative_intensity
+        
+        
+            ~NonHomogeneousPoissonProcess.fit
+        
+        
+            ~NonHomogeneousPoissonProcess.freeze
+        
+        
+            ~NonHomogeneousPoissonProcess.get_params
+        
+        
+            ~NonHomogeneousPoissonProcess.intensity
+        
+        
+            ~NonHomogeneousPoissonProcess.is_fitted
+        
+        
+            ~NonHomogeneousPoissonProcess.is_parametrized
+        
+        
+            ~NonHomogeneousPoissonProcess.set_params
+        
+    

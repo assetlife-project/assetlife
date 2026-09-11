@@ -1,0 +1,6 @@
+﻿load\_insulator\_string
+=======================
+
+.. currentmodule:: assetlife.datasets
+
+.. autofunction:: load_insulator_string

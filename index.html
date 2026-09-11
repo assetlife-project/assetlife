@@ -1,0 +1,441 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" data-theme="auto">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title> &#8212; AssetLife documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "auto";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "auto";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=0ebd861e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="_static/custom-icon.js?v=74687d30"></script>
+    <link rel="icon" href="_static/assetlife-icon-color.svg"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.2" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="auto">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+<div class="container-fluid px-0 vw-100">
+    <div style="background: linear-gradient(to right, rgba(240, 247, 255, 0.5), rgba(140, 183, 237, 0.7), rgba(140, 183, 237, 0.5), rgba(105, 169, 250, 0.5), rgba(163, 204, 255, 0.5), rgba(163, 204, 255, 0.5), rgba(240, 247, 255, 0.5));">
+        <div class="container py-4">
+            
+            <div class="d-block d-md-none">
+                <div class="d-flex justify-content-center align-items-center">
+                    <div class="me-3">
+                        <img src="_static/assetlife-horizontal-color.png" alt="AssetLife Logo" style="max-width: 40vw;">
+                    </div>
+                    <div class="d-flex flex-column">
+                        <a href="https://pypi.org/project/assetlife/" class="btn shadow mb-2"
+                           style="background-color: rgb(2, 111, 247); color: white;">
+                            Download
+                        </a>
+                        <span class="text-muted">0.1.2 release</span>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="d-none d-md-block">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="me-4">
+                            <img src="_static/assetlife-horizontal-color.png" alt="AssetLife Logo" style="max-width: 30vw;">
+                        </div>
+                        <div class="d-flex flex-column">
+                            <a href="https://pypi.org/project/assetlife/" class="btn shadow mb-2"
+                               style="background-color: rgb(0, 55, 120); color: white;">
+                                Download
+                            </a>
+                            <span class="text-muted">0.1.2 release</span>
+                        </div>
+                    </div>
+
+                    <div class="mx-4" style="flex: 1;">
+                        <p class="mb-2 fs-6">AssetLife is an <b>open source</b> Python library to guide decision-making in <b>asset management</b>. It is based on the <b>reliability theory</b>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="install.html">
+    Install
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guides/index.html">
+    User guides
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="for_developers/index.html">
+    For developers
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/assetlife-project/assetlife/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/assetlife/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-custom fa-lg" data-prefix="fa-custom" data-icon="pypi" aria-hidden="true"></i><span class="visually-hidden">PyPI</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+<div class="bd-content">
+    <div class="bd-article-container">
+        <article class="bd-article">
+
+            
+            <div class="container mt-4 mb-4">
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <form class="bd-search" action="search.html" method="get">
+                            <div class="input-group">
+                                <input type="search" class="form-control" name="q" placeholder="Search the documentation..." aria-label="Search">
+                                <button class="btn" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+            
+            <div class="container mt-4">
+                <h5 class="mb-4">Content of the documentation</h5>
+                <table class="table">
+                    <tbody style="background-color: white;">
+                        <tr>
+                            <td style="width: 25%; background-color: white;">
+                                <a href="install.html">Install</a>
+                            </td>
+                            <td style="width: 75%; background-color: white;">
+                                How to install AssetLife on your machine.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color: white;">
+                                <a href="user_guides/index.html">User guides</a>
+                            </td>
+                            <td style="background-color: white;">
+                                Overview and explanations of AssetLife important features.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color: white;">
+                                <a href="api/index.html">API</a>
+                            </td>
+                            <td style="background-color: white;">
+                                The exposed AssetLife API, a currated list of objects public interfaces.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color: white;">
+                                <a href="for_developers/index.html">For developers</a>
+                            </td>
+                            <td style="background-color: white;">
+                                Under-the-hood documentation for contributors.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            
+            <div class="sd-container-fluid sd-sphinx-override sd-mb-4 mt-5">
+                <h5 class="mb-4">About AssetLife</h5>
+                <div class="sd-row row-eq-height sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-1 sd-row-cols-md-3 sd-g-2">
+                    <div class="sd-col d-flex">
+                        <div class="sd-card bg-white w-100">
+                            <div class="sd-card-body p-2" style="display: block;">
+                                <h6 class="sd-card-title" style="margin-top: 0;">Statistical expertise</h6>
+                                <p style="text-align: left; margin-bottom: 0;">AssetLife implements statistical models of the reliability theory.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sd-col d-flex">
+                        <div class="sd-card bg-white w-100">
+                            <div class="sd-card-body p-2" style="display: block;">
+                                <h6 class="sd-card-title" style="margin-top: 0;">Open science</h6>
+                                <p style="text-align: left; margin-bottom: 0;">AssetLife is open source and tries to gather the best of scientific knowledge to conduct appropriate asset management.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sd-col d-flex">
+                        <div class="sd-card bg-white w-100">
+                            <div class="sd-card-body p-2" style="display: block;">
+                                <h6 class="sd-card-title" style="margin-top: 0;">Easy to use (or trying to be)</h6>
+                                <p style="text-align: left; margin-bottom: 0;">AssetLife is coded in Python and we hope that its design makes it accessible for many users.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="container mb-5">
+                <h6 class="mb-4">AssetLife users</h6>
+                <div class="row row-cols-2 row-cols-md-4 g-4 justify-content-center align-items-center">
+                    <div class="col d-flex justify-content-center align-items-center" style="height: 100px;">
+                        <img src="_static/company1.png" alt=""
+                             style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;">
+                    </div>
+                    <div class="col d-flex justify-content-center align-items-center" style="height: 100px;">
+                        <img src="_static/rte.png" alt="RTE"
+                             style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;">
+                    </div>
+                    <div class="col d-flex justify-content-center align-items-center" style="height: 100px;">
+                        <img src="_static/artelys.png" alt="Artelys"
+                             style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;">
+                    </div>
+                    <div class="col d-flex justify-content-center align-items-center" style="height: 100px;">
+                        <img src="_static/company2.png" alt=""
+                             style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;">
+                    </div>
+                </div>
+            </div>
+
+        </article>
+    </div>
+</div>
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2007 - 2026, AssetLife developers (Apache 2.0 License).
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

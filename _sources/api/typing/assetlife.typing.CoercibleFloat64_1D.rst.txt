@@ -1,0 +1,6 @@
+﻿CoercibleFloat64\_1D
+====================
+
+.. currentmodule:: assetlife.typing
+
+.. autodata:: CoercibleFloat64_1D

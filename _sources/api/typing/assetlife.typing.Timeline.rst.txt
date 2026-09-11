@@ -1,0 +1,6 @@
+﻿Timeline
+========
+
+.. currentmodule:: assetlife.typing
+
+.. autodata:: Timeline
