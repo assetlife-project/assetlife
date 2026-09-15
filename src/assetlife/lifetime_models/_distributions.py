@@ -163,6 +163,9 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
 def init_distrib_params_from_lifetimes(
     model: LifetimeDistribution, time : onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]
 ) -> onp.Array1D[np.float64]:
+    """
+    Init method based on statistical heuristics to init parameters of a distribution before fit.
+    """
     # flatten in case of 2D time
     flatten_time = time.flatten()
     nb_params = model.get_params().size
