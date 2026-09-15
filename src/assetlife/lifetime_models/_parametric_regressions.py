@@ -271,7 +271,7 @@ class ParametricLifetimeRegression(
         )  # init new regression object with appropriate number of covar
         lifetime_data = LifetimeData(time, event, entry, args)
         x0 = kwargs.get(
-            "x0", init_regression_params_from_lifetimes(fresh_regression, lifetime_data)
+            "x0", init_regression_params_from_lifetimes(fresh_regression, time)
         )
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
@@ -306,11 +306,15 @@ class ParametricLifetimeRegression(
 
 
 def init_regression_params_from_lifetimes(
-    model: ParametricLifetimeRegression, data: LifetimeData
+    model: ParametricLifetimeRegression, time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]
 ) -> onp.Array1D[np.float64]:
+    """
+    Init method based on statistical heuristics to init parameters of a regression before fit.
+    Covariates coefficients are init to 0, baseline coefficients are init based on distribution heuristics.
+    """
     param0 = np.zeros_like(model.get_params(), dtype=np.float64)
     param0[-model.baseline.get_params().size :] = init_distrib_params_from_lifetimes(
-        model.baseline, data
+        model.baseline, time
     )
     return param0
 

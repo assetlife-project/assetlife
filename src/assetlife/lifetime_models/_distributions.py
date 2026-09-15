@@ -133,7 +133,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         lifetime_data = LifetimeData(time, event=event, entry=entry)
         fresh_distrib = type(self)()
         x0 = kwargs.get(
-            "x0", init_distrib_params_from_lifetimes(fresh_distrib, lifetime_data)
+            "x0", init_distrib_params_from_lifetimes(fresh_distrib, time)
         )
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
@@ -161,24 +161,24 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
 
 
 def init_distrib_params_from_lifetimes(
-    model: LifetimeDistribution, data: LifetimeData
+    model: LifetimeDistribution, time : onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]
 ) -> onp.Array1D[np.float64]:
-    # flatten censored_time in case it is 2D
-    all_time_values = np.concatenate((
-        data.complete_time.flatten(),
-        data.censored_time.flatten(),
-    ))
+    """
+    Init method based on statistical heuristics to init parameters of a distribution before fit.
+    """
+    # flatten in case of 2D time
+    flatten_time = time.flatten()
     nb_params = model.get_params().size
     if isinstance(model, Gompertz):
         param0 = np.empty(nb_params, dtype=np.float64)
-        rate = np.pi / (np.sqrt(6) * np.std(all_time_values))
-        shape = np.exp(-rate * np.mean(all_time_values))
+        rate = np.pi / (np.sqrt(6) * np.std(flatten_time))
+        shape = np.exp(-rate * np.mean(flatten_time))
         param0[0] = shape
         param0[1] = rate
         return param0
 
     param0 = np.ones(nb_params, dtype=np.float64)
-    param0[-1] = 1 / np.median(all_time_values)
+    param0[-1] = 1 / np.median(flatten_time)
     return param0
 
 
