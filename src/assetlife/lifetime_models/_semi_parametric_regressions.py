@@ -421,7 +421,7 @@ class SemiParametricProportionalHazard:
         **kwargs: Any,
     ) -> CoxPartialLifetimeLikelihood:
         covar_effect = LinearCovarEffect(*(0.0,) * len(covar))
-        x0 = kwargs.get("x0", np.random.random(len(covar)))
+        x0 = kwargs.get("x0", np.zeros(len(covar),dtype=float))
         config = FitConfig(x0)
         config.scipy_minimize_options["method"] = kwargs.get("method", "trust-exact")
         config.covariance_method = kwargs.get("covariance_method", "exact")
