@@ -77,7 +77,7 @@ html_static_path = ["_static"]
 html_title = "AssetLife documentation"  # sidebar title
 html_logo = "_static/assetlife-horizontal-color.svg"
 html_favicon = "_static/assetlife-icon-color.svg"
-html_js_files = ["custom-icon.js"]
+html_js_files = [("custom-icon.js", {"defer": "defer"})]
 html_css_files = ["css/custom.css"]  # custom css to change some colors
 
 html_sidebars = {
