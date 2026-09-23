@@ -10,12 +10,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 #  fetch all history for all tags and branches
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -39,7 +39,7 @@ jobs:
           folder: ./docs/build/html # The folder the action should deploy.
 
       - name: Save website as an artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: website
           path: ./docs/build
