@@ -231,6 +231,18 @@ commands = [
   ],
 ]
 
+[tool.tox.env.docs-versions]
+description = "sphinx build of latest plus every released version"
+labels = ["docs"]
+runner = "uv-venv-runner"
+skip_install = true
+allowlist_externals = ["bash"]
+# tox filters the environment, the script would otherwise not detect the CI run
+pass_env = ["CI"]
+commands = [
+  ["bash", "docs/source/docs_versioning_build.sh"],
+]
+
 [tool.tox.env.docs]
 description = "sphinx build"
 labels = ["docs"]

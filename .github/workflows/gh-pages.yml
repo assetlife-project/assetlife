@@ -10,37 +10,33 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 #  fetch all history for all tags and branches
 
-      - name: Setup Python
-        uses: actions/setup-python@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: "3.11"
-
-      - name: Install relife locally with doc dependencies
-        run: |
-          python -m pip install . --group dev
 
       - name: Extra installs
         # pandoc is required by sphinx extensions
         run: sudo apt-get update && sudo apt-get install -y pandoc
 
-      - name: Build Sphinx Doc
-        run: |
-          # prefer sphinx-build rather than make build (it allows more control)
-          sphinx-build -M html ./docs/source ./docs/build -Ea
+      - name: Build Sphinx docs for every released version
+        run: uvx --with tox-uv tox -e docs-versions
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages # branch on which files are commited
-          folder: ./docs/build/html # The folder the action should deploy.
+          folder: ./docs/build/html/ # The folder the action should deploy.
+          clean: true # drop files of the previous deployment that are no longer built
 
       - name: Save website as an artifact
         uses: actions/upload-artifact@v7
         with:
           name: website
-          path: ./docs/build
+          path: ./docs/build/html
           retention-days: 14
