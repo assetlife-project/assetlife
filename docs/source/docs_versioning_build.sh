@@ -1,98 +1,166 @@
 #!/usr/bin/env bash
 #
 # Build the multi-version documentation site under ./docs/build/html/.
-# Usage, from the repository root :
+#
+# Usage, from anywhere inside the repository:
 #   uvx tox -e docs-versions                        # or: bash docs/source/docs_versioning_build.sh
 #   python -m http.server 8000 -d docs/build/html   # local server for the preview
 #
 # The base URL is the production site in CI and the local server otherwise.
 #
-# One folder per major.minor family having a release tag, built from the highest
-# patch of that family, plus "latest" built from main. The conf.py always comes 
-# from the starting revision, so every version renders with the current build logic.
+# One folder per major.minor family that has a release tag, built from the
+# highest patch of that family, plus "latest" built from main. conf.py always
+# comes from your working directory, so every version renders with the current
+# build logic (uncommitted edits to conf.py included).
+#
+# Each version is checked out in a temporary git worktree: your working
+# directory, including uncommitted and untracked files, is never modified.
 
-set -euo pipefail   # Stop script if error or undefined variable and show output
+# Stop on errors, undefined variables and failures inside pipelines
+set -euo pipefail
 
-# GitHub Actions sets CI=true, a local run serves the site from a local server instead
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+# GitHub Actions sets CI=true; a local run serves the site from a local server
+# Must end with a trailing slash
 if [ -n "${CI:-}" ]; then
-    BASE_URL="https://docs.assetlife.org/"                 # URL of the site, ending with /
+    BASE_URL="https://docs.assetlife.org/"
 else
     BASE_URL="http://localhost:8000/"
 fi
 
-SITE_DIR=docs/build/html                                   # final site, one folder per version
-VENV_DIR=docs/build/venvs                                  # one environment per version, dropped at the end
-DOCTREES_DIR=docs/build/doctrees                           # sphinx cache, dropped at the end
+# Work from the repository root, whatever directory the script is run from
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 
-# Refuse to run over work in progress since it would delete the work with the multiple checkouts
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "ERROR: commit or stash your changes, this script checks out tags in the working tree" >&2
-    exit 1
-fi
+# Absolute paths: the builds run from the temporary worktrees
+SITE_DIR="$REPO_ROOT/docs/build/html"          # final site, one folder per version
+VENV_DIR="$REPO_ROOT/docs/build/venvs"         # one environment per version, removed at the end
+DOCTREES_DIR="$REPO_ROOT/docs/build/doctrees"  # Sphinx cache, removed at the end
+CONF="$REPO_ROOT/docs/source/conf.py"          # conf.py used for every build
 
-START_REF="$(git symbolic-ref --quiet --short HEAD || git rev-parse HEAD)"   # branch or commit if detached (if on a tag)
+# ---------------------------------------------------------------------------
+# Temporary worktrees and cleanup
+# ---------------------------------------------------------------------------
 
-# Put the repository back to initial state whe script ends (with or without error)
-trap 'git checkout --force "$START_REF"' EXIT
+# Every version is checked out in a subfolder of this directory
+WORK_DIR="$(mktemp -d)"
 
-# Release tags, pre-releases excluded
+# Delete the temporary checkouts when the script ends, whether it succeeds or
+# fails; this never touches your working directory
+cleanup() {
+    rm -rf "$WORK_DIR"
+    git worktree prune   # forget the worktrees that no longer exist
+}
+trap cleanup EXIT
+
+# ---------------------------------------------------------------------------
+# Functions
+# ---------------------------------------------------------------------------
+
+# Print release tags (vX.Y.Z), pre-releases excluded
 release_tags() {
-    # `|| true`: no release tag is a valid case, grep must not abort the script through pipefail
+    # `|| true`: having no release tag is valid, grep must not abort the
+    # script through pipefail
     git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true
 }
 
-# Highest patch of every major.minor family, newest first, printed as "<tag> <folder>" lines
+# Print the highest patch of every major.minor family, newest first,
+# as "<tag> <folder>" lines
 select_versions() {
     local family
-    # Delete patch number and sort by version (recent first)
+
+    # Strip the patch number, then sort families by version, newest first
     release_tags | sed -E 's/\.[0-9]+$//' | sort -V -u | tac \
         | while read -r family; do
-            echo "$(release_tags | grep -F "$family." | sort -V | tail -1) $family"  # List all highest patches by family
+            echo "$(release_tags | grep -F "$family." | sort -V | tail -1) $family"
         done
 }
 
-# $1 - version name ("latest" or "v0.1"), used as DOCS_VERSION (in conf.py) for switcher and as output folder
+# Build one version of the documentation in a temporary worktree
+#   $1 - version name ("latest" or "v0.1"), passed to conf.py as DOCS_VERSION
+#        for the version switcher, and used as the output folder
+#   $2 - git ref to build, fully qualified to avoid any branch/tag ambiguity
+#        (refs/heads/main, refs/tags/v0.1.3)
 build_version() {
     local version="$1"
+    local ref="$2"
+    local src="$WORK_DIR/$version"
+    local status=0
 
-    # A dedicated environment per version build (UV_PROJECT_ENVIRONMENT is built-in uv)
-    UV_PROJECT_ENVIRONMENT="$VENV_DIR/$version" DOCS_VERSION="$version" \
-        uv run --group docs \
-        sphinx-build -b html -d "$DOCTREES_DIR" -E ./docs/source "$SITE_DIR/$version"
+    # --detach: a build needs no branch, and git refuses to check out a branch
+    # (main) that is already checked out in your working directory
+    git worktree add --detach --quiet "$src" "$ref^{commit}" || return 1
+
+    # Same conf.py for every build
+    cp "$CONF" "$src/docs/source/conf.py" || status=$?
+
+    # Subshell: the `cd` only applies to this build
+    if [ "$status" -eq 0 ]; then
+        (
+            cd "$src"
+
+            # tox activates its own environment (.tox/docs-versions) by setting
+            # VIRTUAL_ENV; uv would ignore it anyway, unsetting it avoids the warning
+            unset VIRTUAL_ENV
+
+            # A dedicated environment per version (UV_PROJECT_ENVIRONMENT is read by uv)
+            UV_PROJECT_ENVIRONMENT="$VENV_DIR/$version" \
+            DOCS_VERSION="$version" \
+                uv run --quiet --group docs \
+                sphinx-build -b html -d "$DOCTREES_DIR/$version" -E docs/source "$SITE_DIR/$version" --quiet --fail-on-warning
+        ) || status=$?
+    fi
+
+    # Remove this checkout right away, only one exists at a time
+    git worktree remove --force "$src" || true
+
+    return "$status"
 }
 
-rm -rf "$SITE_DIR"                                         # start from an empty site
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
+# Start from an empty site
+rm -rf "$SITE_DIR"
 mkdir -p "$SITE_DIR" "$VENV_DIR"
 
-# Build main branch in "latest"
+# "latest" is built from the main branch; a failure here stops the script
 echo "=== Building latest ==="
-git checkout --force main
-git checkout "$START_REF" -- docs/source/conf.py
-build_version latest
+build_version latest refs/heads/main
 
-# Feeds the theme version dropdown
+# Entries for the theme's version dropdown
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
 ENTRIES=$(printf '{"name": "latest (dev)", "version": "latest", "url": "%slatest/"}' "$BASE_URL")
 
 while read -r TAG FOLDER; do
     echo "=== Building $TAG into $FOLDER ==="
-    git checkout --force "$TAG"                            # --force because conf.py is a modified file
-    git checkout "$START_REF" -- docs/source/conf.py       # same conf for all builds
-    
-    if build_version "$FOLDER"; then
+
+    if build_version "$FOLDER" "refs/tags/$TAG"; then
         ENTRIES+=$(printf ',\n  {"name": "%s", "version": "%s", "url": "%s%s/"}' \
             "$TAG" "$FOLDER" "$BASE_URL" "$FOLDER")
     else
-        echo "WARNING: skipped $TAG, documentation could not be built" >&2   # a failed tag must not fail the site
+        # A tag that fails to build must not fail the whole site
+        echo "WARNING: skipped $TAG, documentation could not be built" >&2
     fi
 done < <(select_versions)
 
-printf '[\n  %s\n]\n' "$ENTRIES" > "$SITE_DIR/versions.json"   # Write the versions.json file for the dropdown menu
+# ---------------------------------------------------------------------------
+# Site files
+# ---------------------------------------------------------------------------
 
-touch "$SITE_DIR/.nojekyll"   # Jekyll ignores folders starting with _
+# versions.json feeds the dropdown menu
+printf '[\n  %s\n]\n' "$ENTRIES" > "$SITE_DIR/versions.json"
 
-# Create HTML index that redirects to "latest" (main) folder by default
+# Without this, GitHub Pages' Jekyll ignores folders starting with "_"
+touch "$SITE_DIR/.nojekyll"
+
+# Root index redirects to "latest" by default
 printf '<meta http-equiv="refresh" content="0; url=./latest/">\n' > "$SITE_DIR/index.html"
 
-# Only the generated HTML is needed to serve or deploy the site, -E rebuilds the cache anyway
+# Only the generated HTML is needed to serve or deploy the site;
+# -E rebuilds the cache anyway
 rm -rf "$VENV_DIR" "$DOCTREES_DIR"
