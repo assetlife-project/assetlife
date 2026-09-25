@@ -73,6 +73,9 @@ dev = [
   { include-group = "type" },
 ]
 
+[tool.setuptools.package-data]
+"assetlife.datasets.csv" = ["*.csv"]
+
 # taken from https://github.com/jorenham/optype
 # [based]pyright
 
