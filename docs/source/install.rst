@@ -2,7 +2,7 @@ Install
 =======
 
 AssetLife is a Python package. It is uploaded on the `Python Package Index (PyPi) <https://pypi.org/>`_. Before you install AssetLife, make
-sure Python **3.11 (or newer)** is installed. It is highly recommended to **create and activate** a virtual environment before.
+sure Python **3.11 (or newer)** is installed. It is highly recommended to **create and activate** a `Python virtual environment <https://docs.python.org/3/tutorial/venv.html>`_ before.
 
 Install AssetLife with `pip <https://packaging.python.org/en/latest/key_projects/#pip>`_ :
 
@@ -21,15 +21,5 @@ Install AssetLife with `pip <https://packaging.python.org/en/latest/key_projects
 
 .. note::
 
-    For **uv** users, replace all ``python -m`` by ``uv``:
+    For uv users, run ``uv pip install assetlife``
 
-    .. code-block::
-
-        $ uv pip install assetlife
-
-    and
-
-    .. code-block::
-
-        ...
-        $ uv pip install
