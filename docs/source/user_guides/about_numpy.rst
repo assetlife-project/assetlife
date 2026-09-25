@@ -1,10 +1,10 @@
 About NumPy
 ===========
 
-ReLife is built using `NumPy <https://numpy.org/>`_, a fundamental Python library for numerical computing.
-While you don't need to be a NumPy expert, understanding its basics will help since ReLife often requires data input of ``np.ndarray`` type.
+AssetLife is built using `NumPy <https://numpy.org/>`_, a fundamental Python library for numerical computing.
+While you don't need to be a NumPy expert, understanding its basics will help since AssetLife often requires data input of ``np.ndarray`` type.
 
-There are 3 standard representations of data in ReLife :
+There are 3 standard representations of data in AssetLife :
 
 - If you want to pass a scalar value, use ``float`` built-in type (``np.float64`` is accepted but not required).
 - If you want to pass a vector of :math:`\mathbb{R}^n`, e.g. :math:`n` values for one asset, use a ``np.ndarray`` of shape ``(n,)``.
@@ -14,7 +14,7 @@ There are 3 standard representations of data in ReLife :
 
 .. code-block:: python
 
-    >>> from relife.lifetime_model import Weibull
+    >>> from assetlife.lifetime_models import Weibull
     >>> weibull = Weibull(3.47, 0.012)
     >>> weibull.sf(40.)
     np.float64(0.9246627462729304)
