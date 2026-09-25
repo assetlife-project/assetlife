@@ -1,0 +1,117 @@
+﻿
+
+
+
+ParametricProportionalHazard
+============================
+
+.. currentmodule:: assetlife.lifetime_models
+
+.. autoclass:: ParametricProportionalHazard
+    :members:
+    :inherited-members:
+    :exclude-members: __init__, __new__
+    :member-order: alphabetical
+
+    
+    .. rubric:: Methods
+
+    .. autosummary::
+        :nosignatures:
+
+    
+        
+        
+            ~ParametricProportionalHazard.apply_condition
+        
+        
+            ~ParametricProportionalHazard.cdf
+        
+        
+            ~ParametricProportionalHazard.chf
+        
+        
+            ~ParametricProportionalHazard.dhf
+        
+        
+            ~ParametricProportionalHazard.fit
+        
+        
+            ~ParametricProportionalHazard.freeze
+        
+        
+            ~ParametricProportionalHazard.get_coefficients
+        
+        
+            ~ParametricProportionalHazard.get_params
+        
+        
+            ~ParametricProportionalHazard.hf
+        
+        
+            ~ParametricProportionalHazard.ichf
+        
+        
+            ~ParametricProportionalHazard.init_likelihood
+        
+        
+            ~ParametricProportionalHazard.is_fitted
+        
+        
+            ~ParametricProportionalHazard.is_parametrized
+        
+        
+            ~ParametricProportionalHazard.isf
+        
+        
+            ~ParametricProportionalHazard.jac_cdf
+        
+        
+            ~ParametricProportionalHazard.jac_chf
+        
+        
+            ~ParametricProportionalHazard.jac_hf
+        
+        
+            ~ParametricProportionalHazard.jac_pdf
+        
+        
+            ~ParametricProportionalHazard.jac_sf
+        
+        
+            ~ParametricProportionalHazard.ls_integrate
+        
+        
+            ~ParametricProportionalHazard.mean
+        
+        
+            ~ParametricProportionalHazard.median
+        
+        
+            ~ParametricProportionalHazard.moment
+        
+        
+            ~ParametricProportionalHazard.mrl
+        
+        
+            ~ParametricProportionalHazard.pdf
+        
+        
+            ~ParametricProportionalHazard.plot
+        
+        
+            ~ParametricProportionalHazard.ppf
+        
+        
+            ~ParametricProportionalHazard.rvs
+        
+        
+            ~ParametricProportionalHazard.set_params
+        
+        
+            ~ParametricProportionalHazard.sf
+        
+        
+            ~ParametricProportionalHazard.var
+        
+    

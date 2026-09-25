@@ -1,0 +1,6 @@
+﻿unweighted\_laguerre\_quadrature
+================================
+
+.. currentmodule:: assetlife.quadratures
+
+.. autofunction:: unweighted_laguerre_quadrature

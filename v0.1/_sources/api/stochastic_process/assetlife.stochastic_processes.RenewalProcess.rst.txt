@@ -1,0 +1,48 @@
+﻿
+
+
+
+RenewalProcess
+==============
+
+.. currentmodule:: assetlife.stochastic_processes
+
+.. autoclass:: RenewalProcess
+    :members:
+    :inherited-members:
+    :exclude-members: __init__, __new__
+    :member-order: alphabetical
+
+    
+    .. rubric:: Methods
+
+    .. autosummary::
+        :nosignatures:
+
+    
+        
+        
+            ~RenewalProcess.expected_number_of_events
+        
+        
+            ~RenewalProcess.expected_number_of_preventive_renewals
+        
+        
+            ~RenewalProcess.get_params
+        
+        
+            ~RenewalProcess.is_fitted
+        
+        
+            ~RenewalProcess.is_parametrized
+        
+        
+            ~RenewalProcess.renewal_density
+        
+        
+            ~RenewalProcess.renewal_function
+        
+        
+            ~RenewalProcess.set_params
+        
+    

@@ -1,0 +1,114 @@
+﻿
+
+
+
+Gompertz
+========
+
+.. currentmodule:: assetlife.lifetime_models
+
+.. autoclass:: Gompertz
+    :members:
+    :inherited-members:
+    :exclude-members: __init__, __new__
+    :member-order: alphabetical
+
+    
+    .. rubric:: Methods
+
+    .. autosummary::
+        :nosignatures:
+
+    
+        
+        
+            ~Gompertz.apply_condition
+        
+        
+            ~Gompertz.cdf
+        
+        
+            ~Gompertz.chf
+        
+        
+            ~Gompertz.dhf
+        
+        
+            ~Gompertz.fit
+        
+        
+            ~Gompertz.freeze
+        
+        
+            ~Gompertz.get_params
+        
+        
+            ~Gompertz.hf
+        
+        
+            ~Gompertz.ichf
+        
+        
+            ~Gompertz.init_likelihood
+        
+        
+            ~Gompertz.is_fitted
+        
+        
+            ~Gompertz.is_parametrized
+        
+        
+            ~Gompertz.isf
+        
+        
+            ~Gompertz.jac_cdf
+        
+        
+            ~Gompertz.jac_chf
+        
+        
+            ~Gompertz.jac_hf
+        
+        
+            ~Gompertz.jac_pdf
+        
+        
+            ~Gompertz.jac_sf
+        
+        
+            ~Gompertz.ls_integrate
+        
+        
+            ~Gompertz.mean
+        
+        
+            ~Gompertz.median
+        
+        
+            ~Gompertz.moment
+        
+        
+            ~Gompertz.mrl
+        
+        
+            ~Gompertz.pdf
+        
+        
+            ~Gompertz.plot
+        
+        
+            ~Gompertz.ppf
+        
+        
+            ~Gompertz.rvs
+        
+        
+            ~Gompertz.set_params
+        
+        
+            ~Gompertz.sf
+        
+        
+            ~Gompertz.var
+        
+    
