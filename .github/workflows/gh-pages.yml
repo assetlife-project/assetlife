@@ -2,6 +2,7 @@ name: Build and deploy Github pages
 on:
   release:
     types: [published]
+  workflow_dispatch: # allow running it manually
 permissions:
   contents: write
 jobs:
