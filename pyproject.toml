@@ -1,18 +1,18 @@
 [project]
 name = "assetlife"
-version = "0.1.3.dev1"
+version = "0.1.5"
 description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
 readme = "README.md"
-authors = [{name = "Thomas Guillon et al."}]
-maintainers = [{name = "AssetLife Developers"}]
+authors = [{ name = "Thomas Guillon et al." }]
+maintainers = [{ name = "AssetLife Developers" }]
 requires-python = ">=3.11"
 dependencies = [
-    "matplotlib>=3.11.1",
-    "numpy>=2.4.6",
-    "numpydoc>=1.10.0",
-    "optype[numpy]>=0.17.1",
-    "scipy>=1.17.1",
-    "typing-extensions>=4.16.0",
+  "matplotlib>=3.11.1",
+  "numpy>=2.4.6",
+  "numpydoc>=1.10.0",
+  "optype[numpy]>=0.17.1",
+  "scipy>=1.17.1",
+  "typing-extensions>=4.16.0",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -20,6 +20,9 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
   "Intended Audience :: Science/Research",
   "Intended Audience :: Education",
@@ -33,41 +36,45 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 extra = [
-    "jupyterlab>=4.6.3",
-    "pandas>=2.3.3",
+  "jupyterlab>=4.6.3",
+  "pandas>=2.3.3",
 ]
-doc = [
-	{ include-group = "extra" },
-    "nbsphinx>=0.9.8",
-    "pydata-sphinx-theme>=0.21.0",
-    "sphinx>=9.0.4",
-    "sphinx-copybutton>=0.5.2",
-    "sphinx-design>=0.7.0",
+docs = [
+  { include-group = "extra" },
+  "nbsphinx>=0.9.8",
+  "pydata-sphinx-theme>=0.21.0",
+  "sphinx>=9.0.4",
+  "sphinx-copybutton>=0.5.2",
+  "sphinx-design>=0.7.0",
 ]
 lint = [
-    "ruff>=0.16.6",
+  "ruff>=0.16.6",
 ]
 format = [
-	{ include-group = "lint" },
+  { include-group = "lint" },
+  "dprint-py>=0.57.4.0",
 ]
 test = [
-    "lifelines>=0.30.3",
-    "pytest>=9.1.1",
+  "lifelines>=0.30.3",
+  "pytest>=9.1.1",
 ]
 type = [
-    "basedpyright>=1.40.0",
-    "matplotlib-stubs>=0.3.11",
-    "mypy>=2.3.1",
-    "scipy-stubs>=1.17.1.5",
+  "basedpyright>=1.40.0",
+  "matplotlib-stubs>=0.3.11",
+  "mypy>=2.3.1",
+  "scipy-stubs>=1.17.1.5",
 ]
 dev = [
-	{ include-group = "extra" },
-	{ include-group = "doc" },
-	{ include-group = "lint" },
-	{ include-group = "format" },
-	{ include-group = "test" },
-	{ include-group = "type" },
+  { include-group = "extra" },
+  { include-group = "docs" },
+  { include-group = "lint" },
+  { include-group = "format" },
+  { include-group = "test" },
+  { include-group = "type" },
 ]
+
+[tool.setuptools.package-data]
+"assetlife.datasets.csv" = ["*.csv"]
 
 # taken from https://github.com/jorenham/optype
 # [based]pyright
@@ -88,7 +95,7 @@ reportUnusedCallResult = false # https://github.com/microsoft/pyright/issues/865
 reportUnusedImport = false # dupe of F401
 reportUnusedVariable = false # dupe of F841
 
-# ruff
+#  ruff
 
 [tool.ruff]
 src = ["src"]
@@ -170,19 +177,19 @@ allow-dunder-method-names = [
 ]
 allow-magic-value-types = ["int", "str"]
 
-# pytest
+#  pytest
 
 [tool.pytest]
 minversion = "9.0"
-# ignore doctests at the moment
-# only give a whitelist where tests are valid
+#  ignore doctests at the moment
+#  only give a whitelist where tests are valid
 testpaths = [
-    "src/assetlife/tests",
-    "src/assetlife/datasets/tests",
-    "src/assetlife/lifetime_models/tests",
-    "src/assetlife/stochastic_processes/tests",
-    "src/assetlife/policies/tests",
-    "src/assetlife/sampling/tests",
+  "src/assetlife/tests",
+  "src/assetlife/datasets/tests",
+  "src/assetlife/lifetime_models/tests",
+  "src/assetlife/stochastic_processes/tests",
+  "src/assetlife/policies/tests",
+  "src/assetlife/sampling/tests",
 ]
 addopts = ["-ra", "--doctest-modules"]
 doctest_optionflags = ["NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL", "ELLIPSIS"]
@@ -190,7 +197,7 @@ filterwarnings = ["error"]
 log_level = "INFO"
 strict = true
 
-# tox
+#  tox
 
 [tool.tox]
 requires = ["tox-uv>=1"]
@@ -203,6 +210,7 @@ env_list = [
 
 [tool.tox.env_run_base]
 description = "test with {base_python}"
+labels = ["test"]
 runner = "uv-venv-lock-runner"
 dependency_groups = ["test"]
 commands = [
@@ -212,3 +220,46 @@ commands = [
   ],
 ]
 
+[tool.tox.env.dprint]
+description = "dprint check"
+labels = ["check"]
+runner = "uv-venv-lock-runner"
+dependency_groups = ["format"]
+commands = [
+  [
+    "dprint",
+    "check",
+    "--incremental=false",
+    { replace = "posargs", default = [], extend = true },
+  ],
+]
+
+[tool.tox.env.docs]
+description = "sphinx build"
+labels = ["docs"]
+runner = "uv-venv-lock-runner"
+dependency_groups = ["docs"]
+commands = [
+  [
+    "sphinx-build",
+    "-M",
+    "html",
+    "./docs/source",
+    "./docs/build",
+    "--quiet",
+    "--fail-on-warning",
+  ],
+  ["python", "-c", "print(f'Documentation can be accessed at : docs/build/html')"],
+]
+
+[tool.tox.env.docs-versions]
+description = "sphinx build of latest plus every released version"
+labels = ["docs"]
+runner = "uv-venv-runner"
+skip_install = true
+allowlist_externals = ["bash"]
+# tox filters the environment, the script would otherwise not detect the CI run
+pass_env = ["CI"]
+commands = [
+  ["bash", "docs/source/docs_versioning_build.sh"],
+]

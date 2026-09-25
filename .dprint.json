@@ -1,0 +1,30 @@
+{
+  "json": {
+    "array.preferSingleLine": true,
+    "lineWidth": 88
+  },
+  "markdown": {
+    "emphasisKind": "asterisks",
+    "lineWidth": 88,
+    "html.indentWidth": 4,
+    "html.selfClosingSpace": false
+  },
+  "toml": {
+    "lineWidth": 88
+  },
+  "markup": {
+  },
+  "yaml": {
+    "braceSpacing": false,
+    "formatComments": true,
+    "printWidth": 88
+  },
+  "excludes": ["**/*-lock.json", "**/*.lock", "dist/"],
+  "plugins": [
+    "npm:@dprint/json@0.24.0",
+    "npm:@dprint/markdown@0.24.0",
+    "npm:@dprint/toml@0.8.0",
+    "npm:dprint-plugin-markup@0.27.3",
+    "npm:dprint-plugin-yaml@0.6.0"
+  ]
+}
