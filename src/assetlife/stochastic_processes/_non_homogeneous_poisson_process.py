@@ -40,9 +40,9 @@ from assetlife.typing import (
 class NHPPData:
     failures_time: onp.Array1D[np.float64]
     failures_covars: tuple[Any, ...]  # TODO: fix
-    observation_start: onp.Array1D[np.float64]
-    observation_end: onp.Array1D[np.float64]
-    observation_covars: tuple[Any, ...]  # TODO: fix
+    observations_start: onp.Array1D[np.float64]
+    observations_end: onp.Array1D[np.float64]
+    observations_covars: tuple[Any, ...]  # TODO: fix
     covariates: list[str]
     has_partial: bool
     partial_observations_count = onp.Array1D[np.int64] | None
@@ -54,11 +54,9 @@ class NHPPData:
         self,
         failures: pd.DataFrame,
         assets: pd.DataFrame,
-        covariates: list[str] | None,
-        partial_observations: pd.DataFrame | None,
+        covariates: list[str] = [],
+        partial_observations: pd.DataFrame | None = None,
     ):
-        if covariates is None:
-            covariates = []
         self.covariates = covariates
 
         assets_covariates = assets[["id", *self.covariates]]
@@ -152,15 +150,15 @@ class NHPPLikelihood(
 
     def _observation_period_contrib(self) -> float:
         return np.sum(
-            self.model.chf(self.data.observation_end, *self.data.observation_covars)
-            - self.model.chf(self.data.observation_start, *self.data.observation_covars)
+            self.model.chf(self.data.observations_end, *self.data.observations_covars)
+            - self.model.chf(self.data.observations_start, *self.data.observations_covars)
         )
 
     def _jac_observation_period_contrib(self) -> onp.ArrayND[np.float64]:
         jac = self.model.jac_chf(
-            self.data.observation_end, *self.data.observation_covars
+            self.data.observations_end, *self.data.observations_covars
         ) - self.model.jac_chf(
-            self.data.observation_start, *self.data.observation_covars
+            self.data.observations_start, *self.data.observations_covars
         )
         return np.sum(jac, axis=1)
 
@@ -205,12 +203,14 @@ class NHPPLikelihood(
 
 def init_nhpp_likelihood(model: FittableParametricLifetimeModel, failures: pd.DataFrame,
         assets: pd.DataFrame,
-        covariates: list[str] | None,
-        partial_observations: pd.DataFrame | None, **kwargs: Any) -> NHPPLikelihood:
+        covariates: list[str] = [],
+        partial_observations: pd.DataFrame | None = None, **kwargs: Any) -> NHPPLikelihood:
     data = NHPPData(failures, assets, covariates, partial_observations)
     fresh_model = type(model)()
 
     if isinstance(fresh_model, LifetimeDistribution):
+        if (covariates is not None) and len(covariates) > 0:
+            raise ValueError(f"No covariates can be given for fit when using a distribution.")
         x0 = kwargs.get(
                 "x0", init_distrib_params_from_lifetimes(fresh_model, data.failures_time)
             )
@@ -299,8 +299,8 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         self,
         failures: pd.DataFrame,
         assets: pd.DataFrame,
-        covariates: list[str] | None,
-        partial_observations: pd.DataFrame | None,
+        covariates: list[str] = [],
+        partial_observations: pd.DataFrame | None = None,
         **kwargs: Any,
     ):
         optimizer = init_nhpp_likelihood(
