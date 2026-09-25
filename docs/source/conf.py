@@ -16,6 +16,11 @@ author = "AssetLife developers"
 copyright = f"2007 - {datetime.now().year}, {author} (Apache 2.0 License)"
 version = get_version("assetlife")
 
+# GitHub Actions sets CI=true, a local build points the switcher at the local server
+docs_base_url = (
+    "https://docs.assetlife.org/" if os.environ.get("CI") else "http://localhost:8000/"
+)
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -77,7 +82,7 @@ html_static_path = ["_static"]
 html_title = "AssetLife documentation"  # sidebar title
 html_logo = "_static/assetlife-horizontal-color.svg"
 html_favicon = "_static/assetlife-icon-color.svg"
-html_js_files = ["custom-icon.js"]
+html_js_files = [("custom-icon.js", {"defer": "defer"})]
 html_css_files = ["css/custom.css"]  # custom css to change some colors
 
 html_sidebars = {
@@ -120,6 +125,11 @@ html_theme_options = {
         "image_dark": "_static/assetlife-horizontal-white.svg",
     },
     "navbar_start": ["navbar-logo"],
+    "switcher": {
+        "json_url": f"{docs_base_url}versions.json",
+        "version_match": os.environ.get("DOCS_VERSION", "latest"),
+    },
+    "navbar_end": ["theme-switcher", "version-switcher", "navbar-icon-links"],
 }
 
 # Additional templates that should be rendered to pages, maps page names to
