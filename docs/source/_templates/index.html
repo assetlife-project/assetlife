@@ -1,226 +1,201 @@
-{% extends "!layout.html" %} {% block docs_navbar %}
-<div class="container-fluid px-0 vw-100">
-  <div style="background: linear-gradient(to right, rgba(240, 247, 255, 0.5), rgba(140, 183, 237, 0.7), rgba(140, 183, 237, 0.5), rgba(105, 169, 250, 0.5), rgba(163, 204, 255, 0.5), rgba(163, 204, 255, 0.5), rgba(240, 247, 255, 0.5));">
-    <div class="container py-4">
-      {# Mobile version #}
-      <div class="d-block d-md-none">
-        <div class="d-flex justify-content-center align-items-center">
-          <div class="me-3">
-            <img
-              src="{{ pathto('_static/assetlife-horizontal-color.png', 1) }}"
-              alt="AssetLife Logo"
-              style="max-width: 40vw;"
-            >
-          </div>
-          <div class="d-flex flex-column">
-            <a
-              href="https://pypi.org/project/assetlife/"
-              class="btn shadow mb-2"
-              style="background-color: rgb(2, 111, 247); color: white;"
-            >
-              Download
-            </a>
-            <span class="text-muted">{{ version }} release</span>
-          </div>
-        </div>
+{% extends "!layout.html" %} {% set title = "Home" %} {% block docs_navbar %} {#
+Soft header: light blue fading into the page background (also works in dark
+mode) #}
+<div style="background: linear-gradient(180deg, rgba(52, 140, 250, 0.12), rgba(52, 140, 250, 0));">
+  <div class="container pt-5">
+    <div class="d-flex flex-column align-items-center gap-3">
+      {# only-light / only-dark: the theme shows the logo matching the light or
+      dark mode #}
+      <img
+        src="{{ pathto('_static/assetlife-horizontal-color.png', 1) }}"
+        alt="AssetLife Logo"
+        class="only-light"
+        style="max-width: min(60vw, 300px); width: 100%;"
+      >
+      <img
+        src="{{ pathto('_static/assetlife-horizontal-white.png', 1) }}"
+        alt="AssetLife Logo"
+        class="only-dark"
+        style="max-width: min(60vw, 300px); width: 100%;"
+      >
+      <p
+        class="text-center mb-1"
+        style="max-width: 42rem; font-size: 1.15rem; color: var(--pst-color-text-muted);"
+      >
+        Stochastic modeling to guide decision-making in asset management
+      </p>
+      {# PyPI icon: custom icon defined in _static/custom-icon.js (same markup
+      the theme uses) #}
+      <div class="d-flex flex-wrap justify-content-center gap-3">
+        <a
+          href="https://pypi.org/project/assetlife/"
+          class="btn shadow"
+          style="background-color: rgb(2, 111, 247); color: white;"
+        >
+          <i
+            class="fa-custom me-2"
+            data-prefix="fa-custom"
+            data-icon="pypi"
+          ></i>Download
+        </a>
+        <a
+          href="https://github.com/assetlife-project/assetlife"
+          class="btn shadow"
+          style="border: 1px solid rgb(2, 111, 247); color: rgb(2, 111, 247);"
+        >
+          <i class="fa-brands fa-github me-2"></i>Source code
+        </a>
       </div>
-
-      {# Desktop version #}
-      <div class="d-none d-md-block">
-        <div class="d-flex align-items-center justify-content-between mb-4">
-          <div class="d-flex align-items-center">
-            <div class="me-4">
-              <img
-                src="{{ pathto('_static/assetlife-horizontal-color.png', 1) }}"
-                alt="AssetLife Logo"
-                style="max-width: 30vw;"
-              >
-            </div>
-            <div class="d-flex flex-column">
-              <a
-                href="https://pypi.org/project/assetlife/"
-                class="btn shadow mb-2"
-                style="background-color: rgb(0, 55, 120); color: white;"
-              >
-                Download
-              </a>
-              <span class="text-muted">{{ version }} release</span>
-            </div>
-          </div>
-
-          <div class="mx-4" style="flex: 1;">
-            <p class="mb-2 fs-6">
-              AssetLife is an <b>open source</b> Python library to guide
-              decision-making in <b>asset management</b>. It is based on the <b
-              >reliability theory</b>.
-            </p>
-          </div>
-        </div>
+      <div
+        class="d-flex flex-wrap justify-content-center column-gap-4 row-gap-1 fw-bold"
+        style="font-size: 1.1rem;"
+      >
+        <a href="{{ pathto('install') }}">How to install</a>
+        <a href="{{ pathto('user_guides/index') }}">User guides</a>
+        <a href="{{ pathto('api/index') }}">API</a>
       </div>
     </div>
   </div>
 </div>
-{% endblock docs_navbar %} {% block docs_main %}
+{% endblock docs_navbar %} {% block docs_main %} {# pt-0 removes the theme's top
+paddings so only the sections' mt-5 spacing remains #}
 <div class="bd-content">
-  <div class="bd-article-container">
-    <article class="bd-article">
-      {# Search bar section #}
-      <div class="container mt-4 mb-4">
-        <div class="row justify-content-center">
-          <div class="col-md-6">
-            <form
-              class="bd-search"
-              action="{{ pathto('search') }}"
-              method="get"
-            >
-              <div class="input-group">
-                <input
-                  type="search"
-                  class="form-control"
-                  name="q"
-                  placeholder="Search the documentation..."
-                  aria-label="Search"
-                >
-                <button class="btn" type="submit">
-                  <i class="fas fa-search"></i>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      {# Documentation sections table #}
-      <div class="container mt-4">
-        <h5 class="mb-4">Content of the documentation</h5>
-        <table class="table">
-          <tbody style="background-color: white;">
-            <tr>
-              <td style="width: 25%; background-color: white;">
-                <a href="{{ pathto('install') }}">Install</a>
-              </td>
-              <td style="width: 75%; background-color: white;">
-                How to install AssetLife on your machine.
-              </td>
-            </tr>
-            <tr>
-              <td style="background-color: white;">
-                <a href="{{ pathto('user_guides/index') }}">User guides</a>
-              </td>
-              <td style="background-color: white;">
-                Overview and explanations of AssetLife important features.
-              </td>
-            </tr>
-            <tr>
-              <td style="background-color: white;">
-                <a href="{{ pathto('api/index') }}">API</a>
-              </td>
-              <td style="background-color: white;">
-                The exposed AssetLife API, a currated list of objects public
-                interfaces.
-              </td>
-            </tr>
-            <tr>
-              <td style="background-color: white;">
-                <a href="{{ pathto('for_developers/index') }}"
-                >For developers</a>
-              </td>
-              <td style="background-color: white;">
-                Under-the-hood documentation for contributors.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {# Grid section #}
-      <div class="sd-container-fluid sd-sphinx-override sd-mb-4 mt-5">
-        <h5 class="mb-4">About AssetLife</h5>
-        <div class="sd-row row-eq-height sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-1 sd-row-cols-md-3 sd-g-2">
-          <div class="sd-col d-flex">
-            <div class="sd-card bg-white w-100">
-              <div class="sd-card-body p-2" style="display: block;">
-                <h6 class="sd-card-title" style="margin-top: 0;">
-                  Statistical expertise
-                </h6>
-                <p style="text-align: left; margin-bottom: 0;">
-                  AssetLife implements statistical models of the reliability
-                  theory.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="sd-col d-flex">
-            <div class="sd-card bg-white w-100">
-              <div class="sd-card-body p-2" style="display: block;">
-                <h6 class="sd-card-title" style="margin-top: 0;">
-                  Open science
-                </h6>
-                <p style="text-align: left; margin-bottom: 0;">
-                  AssetLife is open source and tries to gather the best of
-                  scientific knowledge to conduct appropriate asset management.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="sd-col d-flex">
-            <div class="sd-card bg-white w-100">
-              <div class="sd-card-body p-2" style="display: block;">
-                <h6 class="sd-card-title" style="margin-top: 0;">
-                  Easy to use (or trying to be)
-                </h6>
-                <p style="text-align: left; margin-bottom: 0;">
-                  AssetLife is coded in Python and we hope that its design makes
-                  it accessible for many users.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# Supporters section #}
-      <div class="container mb-5">
-        <h6 class="mb-4">AssetLife users</h6>
-        <div class="row row-cols-2 row-cols-md-4 g-4 justify-content-center align-items-center">
-          <div
-            class="col d-flex justify-content-center align-items-center"
-            style="height: 100px;"
+  <div class="bd-article-container pt-0">
+    <article class="bd-article pt-0">
+      {# Paragraphs are justified on screens wider than a phone (768px). On
+      phones, #} {# justified short lines get big gaps between words, so text
+      stays left aligned. #}
+      <style>
+      @media (min-width: 768px) {
+        .home-text p { text-align: justify; }
+      }
+      </style>
+      {# max-width: fixed text width, centered on the page #}
+      <div class="home-text" style="max-width: 800px; margin: 0 auto;">
+        {# Each section starts with mt-5, so the space between sections is
+        always the same #} {# About section #}
+        <div class="mt-5">
+          <h6
+            class="mt-0 mb-3"
+            style="border-left: 4px solid var(--pst-color-primary); padding-left: 0.6rem;"
           >
-            <img
-              src="{{ pathto('_static/company1.png', 1) }}"
-              alt=""
-              style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;"
-            >
+            About
+          </h6>
+          <p class="mb-1">AssetLife helps you answer these questions:</p>
+          <div class="row row-cols-1 row-cols-sm-2 g-2 mb-3">
+            <div class="col">
+              <div
+                class="h-100 rounded p-3"
+                style="background: var(--pst-color-surface);"
+              >
+                <i
+                  class="fa-solid fa-screwdriver-wrench me-2"
+                  style="color: var(--pst-color-primary);"
+                ></i>When to maintain, replace or repair an asset?
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="h-100 rounded p-3"
+                style="background: var(--pst-color-surface);"
+              >
+                <i
+                  class="fa-solid fa-scale-balanced me-2"
+                  style="color: var(--pst-color-primary);"
+                ></i>Based upon which criteria?
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="h-100 rounded p-3"
+                style="background: var(--pst-color-surface);"
+              >
+                <i
+                  class="fa-solid fa-coins me-2"
+                  style="color: var(--pst-color-primary);"
+                ></i>What budget?
+              </div>
+            </div>
+            <div class="col">
+              <div
+                class="h-100 rounded p-3"
+                style="background: var(--pst-color-surface);"
+              >
+                <i
+                  class="fa-solid fa-boxes-stacked me-2"
+                  style="color: var(--pst-color-primary);"
+                ></i>How to manage the stocks?
+              </div>
+            </div>
           </div>
-          <div
-            class="col d-flex justify-content-center align-items-center"
-            style="height: 100px;"
+          <p>
+            The library is built on
+            <a href="https://github.com/numpy/numpy">NumPy</a> and
+            <a href="https://github.com/scipy/scipy">SciPy</a> and distributed
+            as a Python package.
+          </p>
+        </div>
+
+        {# Call for contributions section #}
+        <div class="mt-5">
+          <h6
+            class="mt-0 mb-3"
+            style="border-left: 4px solid var(--pst-color-primary); padding-left: 0.6rem;"
           >
+            Call for contributions
+          </h6>
+          <p>The AssetLife project welcomes your expertise and enthusiasm!</p>
+          <p>
+            Before contributing, please read our
+            <a
+              href="https://github.com/assetlife-project/assetlife/blob/main/CONTRIBUTING.md"
+            >contributing guide</a>. It describes the whole contribution
+            process.
+          </p>
+          <p>
+            Small improvements or fixes are always appreciated. If you are
+            considering larger contributions to the source code, please contact
+            us first by opening an
+            <a href="https://github.com/assetlife-project/assetlife/issues"
+            >issue</a>.
+          </p>
+          <p class="mb-1">
+            Writing code isn't the only way to contribute to AssetLife. You can
+            also:
+          </p>
+          <ul>
+            <li>review pull requests</li>
+            <li>help us stay on top of new and old issues</li>
+            <li>report bugs and suggest new features</li>
+            <li>improve the documentation and the user guides</li>
+            <li>
+              develop tutorials, presentations and other educational materials
+            </li>
+            <li>share your use cases in asset management</li>
+            <li>help with outreach and onboard new contributors</li>
+          </ul>
+        </div>
+
+        {# Users section #}
+        <div class="mt-5">
+          <h6
+            class="mt-0 mb-3"
+            style="border-left: 4px solid var(--pst-color-primary); padding-left: 0.6rem;"
+          >
+            Our users
+          </h6>
+          <div class="d-flex flex-wrap justify-content-center align-items-center gap-5">
             <img
               src="{{ pathto('_static/rte.png', 1) }}"
               alt="RTE"
-              style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;"
+              class="dark-light"
+              style="max-height: 60px; max-width: 40%;"
             >
-          </div>
-          <div
-            class="col d-flex justify-content-center align-items-center"
-            style="height: 100px;"
-          >
             <img
               src="{{ pathto('_static/artelys.png', 1) }}"
               alt="Artelys"
-              style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;"
-            >
-          </div>
-          <div
-            class="col d-flex justify-content-center align-items-center"
-            style="height: 100px;"
-          >
-            <img
-              src="{{ pathto('_static/company2.png', 1) }}"
-              alt=""
-              style="max-width: 150px; max-height: 80px; width: auto; height: auto; filter: grayscale(100%); opacity: 0.7;"
+              class="dark-light"
+              style="max-height: 60px; max-width: 40%;"
             >
           </div>
         </div>

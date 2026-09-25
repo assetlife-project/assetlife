@@ -32,8 +32,6 @@ The community looks forward to your contributions. 🎉
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Your First Code Contribution](#your-first-code-contribution)
   - [Improving The Documentation](#improving-the-documentation)
-- [Styleguides](#styleguides)
-  - [Commit Messages](#commit-messages)
 - [Join The Project Team](#join-the-project-team)
 
 ## Code of Conduct
@@ -181,6 +179,18 @@ Enhancement suggestions are tracked as [GitHub issues][AL-ISSUES].
 
 ### Your First Code Contribution
 
+#### Git local setup
+
+Fork the AssetLife repository on GitHub, clone your fork and configure the upstream repository:
+
+```bash
+$ git clone https://github.com/YourLogin/assetlife.git
+$ cd assetlife
+$ git remote add upstream https://github.com/assetlife-project/assetlife.git
+```
+
+#### uv
+
 Ensure you have [`uv`][GH-UV] installed. Now you can install the dev dependencies:
 
 ```bash
@@ -188,8 +198,16 @@ $ uv sync
 ```
 
 This will install all the dependencies needed to run the linters, formatters,
-type-checkers and unit tests. By default, they are installed in a virtual
-environment `.venv`. **Don't forget to activate the virtual environment**.
+type-checkers and unit tests in a Python virtual environment called `.venv`.
+By default, they are installed in a virtual. **Don't forget to activate the virtual environment**.
+
+#### Configure your IDE
+
+Configure your IDE to use:
+
+- Ruff formatter on save
+- Ruff linter for diagnostics
+- Basedpyright language server for type checking
 
 #### Lefthook
 
@@ -236,7 +254,7 @@ To run all the unit tests in parallel on all supported Python versions, run :
 $ uvx tox p -m test
 ```
 
-You can also use `uvx tox p` because unit tests are part of the default tox
+You can also use `uvx tox p` because unit tests are part of the default tox
 environments.
 
 To run all other checks, run :
@@ -247,12 +265,80 @@ $ uvx tox -m check
 
 If formatting errors are raised, fix them by running `dprint fmt`.
 
+#### Development workflow
+
+Synchronize your main branch:
+
+```bash
+git checkout main
+git pull upstream main
+```
+
+Create a feature branch:
+
+```bash
+git checkout -b my_feature
+```
+
+Make changes and commit them.
+
+AssetLife recommends using [Gitmoji](https://gitmoji.dev/) for commit messages
+and PR titles. For VSCode and VSCodium users, it can be convenient to use the
+[`gitmoji-vscode`](https://github.com/seatonjiang/gitmoji-vscode) extension for
+this.
+
+```bash
+git push -u origin my_feature
+```
+
+Run the tests and checks with `tox`.
+
+```bash
+$ uvx tox p -m test
+$ uvx tox p -m check
+```
+
+You can also use `uvx tox p` because unit tests are part of the default tox
+environments. If formatting errors are raised, fix them by running `dprint fmt`.
+
+review the pull request checklist, and open a P
+
+#### Keep your branch up to date
+
+```bash
+git checkout main
+git pull upstream main
+git checkout my_feature
+git merge main
+```
+
+In case of merge conflicts, don't be discouraged. If you can't fix them on your
+own, ask the help of one maintainer.
+
+#### Open a PR
+
+In order to ease the reviewing process, we recommend that your contribution
+complies with the following rules before marking a PR as “ready for review” :
+
+- Use a clear descriptive title.
+- Avoid unrelated commits, formatting changes, or personal comments.
+- Address the complete issue.
+- Run relevant `tox` command (see above).
+- Add or update comments and documentation.
+- Ensure documentation builds correctly.
+- Mark incomplete work as a draft PR.
+
 ### Improving The Documentation
 
 The documentation is written in reStructuredText and built with [Sphinx][GH-SPHINX].
 
 If you're not familiar with reStructuredText, refer to the
 [docs](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html)
+
+The documentation requires [Pandoc](https://pandoc.org/index.html) to be installed on your system.
+
+To contribute to the documentation, follow the same process described in [Your
+first code contribution](#your-first-code-contribution)
 
 To build the documentation, run :
 
@@ -280,15 +366,6 @@ Before modifying the documentation :
 - Some IDEs, such as PyCharm, may report false-positive warnings about
   variables that appear to be unused or unreferenced. These warnings can be
   ignored or disabled for the relevant statement.
-
-## Styleguides
-
-### Commit Messages
-
-AssetLife recommends using [Gitmoji](https://gitmoji.dev/) for commit messages
-and PR titles. For VSCode and VSCodium users, it can be convenient to use the
-[`gitmoji-vscode`](https://github.com/seatonjiang/gitmoji-vscode) extension for
-this.
 
 ## Join The Project Team
 

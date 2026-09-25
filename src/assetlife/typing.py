@@ -1,4 +1,4 @@
-"""Type variables and aliases used throughout ReLife."""
+"""Type variables and aliases."""
 
 from typing import TypeAlias, TypeVarTuple
 
