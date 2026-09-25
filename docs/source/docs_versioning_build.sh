@@ -83,7 +83,7 @@ select_versions() {
 #   $1 - version name ("latest" or "v0.1"), passed to conf.py as DOCS_VERSION
 #        for the version switcher, and used as the output folder
 #   $2 - git ref to build, fully qualified to avoid any branch/tag ambiguity
-#        (refs/heads/main, refs/tags/v0.1.3)
+#        (refs/heads/main, refs/remotes/origin/main, refs/tags/v0.1.3)
 build_version() {
     local version="$1"
     local ref="$2"
@@ -128,9 +128,17 @@ build_version() {
 rm -rf "$SITE_DIR"
 mkdir -p "$SITE_DIR" "$VENV_DIR"
 
-# "latest" is built from the main branch; a failure here stops the script
-echo "=== Building latest ==="
-build_version latest refs/heads/main
+# "latest" is built from the main branch: the local branch when it exists,
+# origin/main otherwise (in CI, actions/checkout only creates remote branches)
+if git show-ref --verify --quiet refs/heads/main; then
+    LATEST_REF=refs/heads/main
+else
+    LATEST_REF=refs/remotes/origin/main
+fi
+ 
+# A failure here stops the script
+echo "=== Building latest from ${LATEST_REF#refs/} ==="
+build_version latest "$LATEST_REF"
 
 # Entries for the theme's version dropdown
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
