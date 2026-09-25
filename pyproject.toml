@@ -1,6 +1,6 @@
 [project]
 name = "assetlife"
-version = "0.1.4"
+version = "0.1.5"
 description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
 readme = "README.md"
 authors = [{ name = "Thomas Guillon et al." }]
@@ -72,6 +72,9 @@ dev = [
   { include-group = "test" },
   { include-group = "type" },
 ]
+
+[tool.setuptools.package-data]
+"assetlife.datasets.csv" = ["*.csv"]
 
 # taken from https://github.com/jorenham/optype
 # [based]pyright
