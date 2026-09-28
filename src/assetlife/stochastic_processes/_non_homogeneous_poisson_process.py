@@ -6,28 +6,227 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import field
 from typing import Any, Generic, Self, no_type_check
+import pandas as pd
 from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
 
-from assetlife.base import FittingResults, ParametricModel
+from assetlife.base import FitConfig, FittingResults, MaximumLikelihoodOptimizer, ParametricModel
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,
     ParametricLifetimeModel,
 )
-from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
+from assetlife.lifetime_models._distributions import Gamma, LifetimeDistribution, get_distrib_params_bounds
+from assetlife.lifetime_models._parametric_regressions import ParametricLifetimeRegression, get_regression_params_bounds
+from assetlife.typing import CoercibleFloat64_1D, CoercibleFloat64_ND, CovarTs, Float64_ND
 
+from assetlife.lifetime_models import init_distrib_params_from_lifetimes, init_regression_params_from_lifetimes
+
+
+class NHPPData:
+    failures_time: onp.Array1D[np.float64]
+    failures_covars: tuple[Any, ...]  # TODO: fix
+    observation_start: onp.Array1D[np.float64]
+    observation_end: onp.Array1D[np.float64]
+    observation_covars: tuple[Any, ...]  # TODO: fix
+    covariates: list[str]
+    has_partial: bool
+    partial_observations_count = onp.Array1D[np.int64] | None
+    partial_observations_start = onp.Array1D[np.float64] | None
+    partial_observations_end = onp.Array1D[np.float64] | None
+    partial_observations_covars = tuple[Any, ...] | None  # TODO: fix
+
+    def __init__(
+        self,
+        failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None,
+        partial_observations: pd.DataFrame | None,
+    ):
+        if covariates is None:
+            covariates = []
+        self.covariates = covariates
+
+        assets_covariates = assets[["id", *self.covariates]]
+
+        failures_merged = pd.merge(failures, assets_covariates, how="left", on="id")
+        self.failures_time = failures_merged["time"].to_numpy(dtype=np.float64)
+        self.failures_covars = tuple(
+            failures_merged[covar] for covar in self.covariates
+        )
+
+        self.observations_start = assets["start"].to_numpy(dtype=np.float64)
+        self.observations_end = assets["end"].to_numpy(dtype=np.float64)
+        self.observations_covars = tuple(
+            assets[covar].to_numpy() for covar in self.covariates
+        )
+
+        if partial_observations is None:
+            self.has_partial = False
+            self.partial_observations_count = None
+            self.partial_observations_start = None
+            self.partial_observations_end = None
+            self.partial_observations_covars = None
+        else:
+            self.has_partial = True
+            partial_observations_merged = pd.merge(
+                partial_observations, assets_covariates, how="left", on="id"
+            )
+            self.partial_observations_count = partial_observations_merged[
+                "count"
+            ].to_numpy(dtype=np.int64)
+            self.partial_observations_start = partial_observations_merged[
+                "start"
+            ].to_numpy(dtype=np.float64)
+            self.partial_observations_end = partial_observations_merged[
+                "end"
+            ].to_numpy(dtype=np.float64)
+            self.partial_observations_covars = tuple(
+                partial_observations_merged[covar].to_numpy()
+                for covar in self.covariates
+            )
+
+
+class NHPPLikelihood(
+    MaximumLikelihoodOptimizer[
+        FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]], NHPPData
+    ]
+):
+    def __init__(
+        self,
+        model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],
+        data: NHPPData,
+        config: FitConfig,
+    ):
+        self.model = model
+        self.data = data
+        self.config = config
+        if "jac" not in self.config.scipy_minimize_options:
+            self.config.scipy_minimize_options["jac"] = self.jac_negative_log
+
+    @property
+    def nb_observations(self) -> int:
+        n = self.data.failures_time.size
+        if self.data.has_partial:
+            n += self.data.partial_observations_count.size #TODO: typing for None case
+        return n
+
+    def negative_log(self, params: onp.Array1D[np.float64]) -> float:
+        self.model.set_params(params)
+        return (
+            self._exact_events_contrib()
+            + self._observation_period_contrib()
+            + self._partial_observation_contrib()
+        )
+
+    def jac_negative_log(self, params: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+            self.model.set_params(params)
+            return (
+                self._jac_exact_events_contrib()
+                + self._jac_observation_period_contrib()
+                + self._jac_partial_observation_contrib()
+            )
+
+    def _exact_events_contrib(self) -> float:
+        return -np.sum(
+            np.log(self.model.hf(self.data.failures_time, *self.data.failures_covars))
+        )
+
+    def _jac_exact_events_contrib(self) -> onp.ArrayND[np.float64]:
+        jac = -self.model.jac_hf(self.data.failures_time, *self.data.failures_covars)
+        return np.sum(jac, axis=1)
+
+    def _observation_period_contrib(self) -> float:
+        return np.sum(
+            self.model.chf(self.data.observation_end, *self.data.observation_covars)
+            - self.model.chf(self.data.observation_start, *self.data.observation_covars)
+        )
+
+    def _jac_observation_period_contrib(self) -> onp.ArrayND[np.float64]:
+        jac = self.model.jac_chf(
+            self.data.observation_end, *self.data.observation_covars
+        ) - self.model.jac_chf(
+            self.data.observation_start, *self.data.observation_covars
+        )
+        return np.sum(jac, axis=1)
+
+    def _partial_observation_contrib(self) -> float:
+        if not self.data.has_partial:
+            return 0.0
+
+        # TODO : typing for None case
+        return np.sum(
+            -self.data.partial_observations_count
+            * np.log(
+                self.model.chf(
+                    self.data.partial_observations_end,
+                    *self.data.partial_observations_covars,
+                )
+                - self.model.chf(
+                    self.data.partial_observations_start,
+                    *self.data.partial_observations_covars,
+                )
+            )
+        )
+
+    def _jac_partial_observation_contrib(self) -> onp.ArrayND[np.float64]:
+        if not self.data.has_partial:
+            return np.zeros_like(self.model.get_params(),dtype=np.float64)
+        
+        # TODO : typing for None case
+        a = self.model.jac_chf(
+            self.data.partial_observations_end,
+            *self.data.partial_observations_covars,
+        ) - self.model.jac_chf(
+            self.data.partial_observations_start, *self.data.partial_observations_covars
+        )
+        b = self.model.chf(
+            self.data.partial_observations_end, *self.data.partial_observations_covars
+        ) - self.model.chf(
+            self.data.partial_observations_start, *self.data.partial_observations_covars
+        )
+        jac = -self.data.partial_observations_count * (a / b)
+        return np.sum(jac, axis=1)
+
+
+def init_nhpp_likelihood(model: FittableParametricLifetimeModel,failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None,
+        partial_observations: pd.DataFrame | None,**kwargs: Any,) -> NHPPLikelihood:
+    data = NHPPData(failures,assets,covariates,partial_observations)
+    fresh_model = type(model)()
+
+    if isinstance(fresh_model, LifetimeDistribution):
+        x0 = kwargs.get(
+                "x0", init_distrib_params_from_lifetimes(fresh_model, data.failures_time)
+            )
+        config = FitConfig(x0)
+        config.scipy_minimize_options["bounds"] = kwargs.get(
+                "bounds", get_distrib_params_bounds(fresh_model)
+            )
+        config.covariance_method = kwargs.get(
+                "covariance_method", "2point" if isinstance(fresh_model, Gamma) else "cs"
+            )
+    elif isinstance(fresh_model, ParametricLifetimeRegression):
+        x0 = kwargs.get(
+                        "x0", init_regression_params_from_lifetimes(fresh_model, data.failures_time)
+                    )
+        config = FitConfig(x0)
+        config.scipy_minimize_options["bounds"] = kwargs.get(
+                "bounds", get_regression_params_bounds(fresh_model)
+            )
+        config.covariance_method = kwargs.get(
+                "covariance_method", "2point" if isinstance(fresh_model.baseline, Gamma) else "cs"
+            )
+    else:
+        raise ValueError(f"Cannot initiate NHPP likelihood with the model {model}, expected Parametric Distribution or Regression.")
+    
+    
+    config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
+    return NHPPLikelihood(fresh_model, data, config)
 
 class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
-    """
-    Non-homogeneous Poisson process.
-
-    Parameters
-    ----------
-    lifetime_model : ParametricLifetimeModel
-        Lifetime model defining the process intensity.
-    """
 
     fitting_results: FittingResults | None
     lifetime_model: ParametricLifetimeModel[*CovarTs]  # not accurate is case of fit
@@ -83,92 +282,21 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         """
         return self.lifetime_model.chf(time, *args)
 
-    def freeze(self, *args: *CovarTs) -> FrozenNonHomogeneousPoissonProcess[*CovarTs]:
-        """
-        Return a process with additional arguments stored.
-
-        Parameters
-        ----------
-        *args : float or np.ndarray
-            Additional arguments needed by the model.
-
-        Returns
-        -------
-        FrozenNonHomogeneousPoissonProcess
-        """
-        return FrozenNonHomogeneousPoissonProcess(self, *args)
-
     def fit(
         self,
-        ages_at_events: onp.Array1D[np.float64],
-        events_assets_ids: Sequence[str],
-        first_ages: onp.Array1D[np.float64] | None = None,
-        last_ages: onp.Array1D[np.float64] | None = None,
-        lifetime_model_args: onp.Array1D[Any]
-        | onp.Array2D[Any]
-        | tuple[onp.Array1D[Any] | onp.Array2D[Any], ...]
-        | None = None,
-        assets_ids: Sequence[str] | None = None,
+        failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None,
+        partial_observations: pd.DataFrame | None,
         **kwargs: Any,
-    ) -> Self:
-        """
-        Estimate process parameters from recurrent failure data.
-
-        Parameters
-        ----------
-        ages_at_events : 1d array of floats
-            Ages of each asset when events occurred.
-        events_assets_ids : sequence of hashable
-            Asset ids corresponding to ``ages_at_events``.
-        first_ages : 1d array of floats, optional
-            Asset ages before the observation period. If set, ``assets_ids`` is
-            required and must have the same length.
-        last_ages : 1d array of floats, optional
-            Asset ages at the end of the observation period. If set,
-            ``assets_ids`` is required and must have the same length.
-        lifetime_model_args : tuple of np.ndarray, optional
-            Additional arguments needed by the lifetime model. If set,
-            ``assets_ids`` is required. For 1d arrays, the size must equal the
-            length of ``assets_ids``. For 2d arrays, the first axis length must
-            equal the length of ``assets_ids``.
-        assets_ids : sequence of hashable, optional
-            Unique asset ids corresponding to values in ``first_ages``,
-            ``last_ages`` and/or ``lifetime_model_args``.
-
-        Returns
-        -------
-        Self
-            The current object with estimated parameters set in place.
-
-        Examples
-        --------
-
-        Ages of assets AB2 and CX13 at each event.
-
-        >>> from assetlife.lifetime_models import Weibull
-        >>> from assetlife.stochastic_processes import NonHomogeneousPoissonProcess
-        >>> nhpp = NonHomogeneousPoissonProcess(Weibull())
-        >>> nhpp.fit(
-        ...     np.array([11.0, 13.0, 21.0, 25.0, 27.0]),
-        ...     ("AB2", "CX13", "AB2", "AB2", "CX13"),
-        ... )
-
-        With additional information and lifetime model args.
-
-        >>> from assetlife.lifetime_models import ParametricProportionalHazard
-        >>> nhpp = NonHomogeneousPoissonProcess(ParametricProportionalHazard())
-        >>> nhpp.fit(
-            np.array([11., 13., 21., 25., 27.]),
-            ("AB2", "CX13", "AB2", "AB2", "CX13"),
-            first_ages = np.array([10., 12.]),
-            last_ages = np.array([35., 60.]),
-            lifetime_model_args=(np.array([[1.2, 5.5], [37.2, 22.2]]),)
-        )
-        """
-        warnings.warn(
-            "Fit method of NHPP will change in a future release", DeprecationWarning
-        )
-        assert isinstance(self.lifetime_model, FittableParametricLifetimeModel)
+    ):
+        optimizer = init_nhpp_likelihood(
+            self.lifetime_model,failures,assets,covariates,partial_observations, **kwargs
+        ) # TODO: typing for non-fittable case
+        fitting_results = optimizer.optimize()
+        self.set_params(fitting_results.optimal_params)
+        self.fitting_results = fitting_results
+        return self
 
 
 class FrozenNonHomogeneousPoissonProcess(
