@@ -206,9 +206,9 @@ def init_nhpp_likelihood(model: FittableParametricLifetimeModel, failures: pd.Da
         covariates: list[str] = [],
         partial_observations: pd.DataFrame | None = None, **kwargs: Any) -> NHPPLikelihood:
     data = NHPPData(failures, assets, covariates, partial_observations)
-    fresh_model = type(model)()
 
-    if isinstance(fresh_model, LifetimeDistribution):
+    if isinstance(model, LifetimeDistribution):
+        fresh_model = type(model)()
         if (covariates is not None) and len(covariates) > 0:
             raise ValueError(f"No covariates can be given for fit when using a distribution.")
         x0 = kwargs.get(
@@ -221,7 +221,10 @@ def init_nhpp_likelihood(model: FittableParametricLifetimeModel, failures: pd.Da
         config.covariance_method = kwargs.get(
                 "covariance_method", "2point" if isinstance(fresh_model, Gamma) else "cs"
             )
-    elif isinstance(fresh_model, ParametricLifetimeRegression):
+    elif isinstance(model, ParametricLifetimeRegression):
+        fresh_model = type(model)(
+                    type(model.baseline)(), coefficients=(0.0,) * len(covariates)
+                ) 
         x0 = kwargs.get(
                         "x0", init_regression_params_from_lifetimes(fresh_model, data.failures_time)
                     )
@@ -307,6 +310,8 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
             self.lifetime_model, failures, assets, covariates, partial_observations, **kwargs
         )  # TODO: typing for non-fittable case
         fitting_results = optimizer.optimize()
+        if isinstance(self.lifetime_model, ParametricLifetimeRegression):
+            self.lifetime_model.covar_effect.set_params([0.0] * len(covariates))  # modify nb coef inplace
         self.set_params(fitting_results.optimal_params)
         self.fitting_results = fitting_results
         return self
