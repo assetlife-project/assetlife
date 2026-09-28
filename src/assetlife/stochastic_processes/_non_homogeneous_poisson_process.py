@@ -2,26 +2,39 @@
 
 from __future__ import annotations
 
-import warnings
-from collections.abc import Sequence
-from dataclasses import field
-from typing import Any, Generic, Self, no_type_check
-import pandas as pd
+from typing import Any, Generic
 from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
+import pandas as pd
 
-from assetlife.base import FitConfig, FittingResults, MaximumLikelihoodOptimizer, ParametricModel
+from assetlife.base import (
+    FitConfig,
+    FittingResults,
+    MaximumLikelihoodOptimizer,
+    ParametricModel,
+)
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,
     ParametricLifetimeModel,
+    init_distrib_params_from_lifetimes,
+    init_regression_params_from_lifetimes,
 )
-from assetlife.lifetime_models._distributions import Gamma, LifetimeDistribution, get_distrib_params_bounds
-from assetlife.lifetime_models._parametric_regressions import ParametricLifetimeRegression, get_regression_params_bounds
-from assetlife.typing import CoercibleFloat64_1D, CoercibleFloat64_ND, CovarTs, Float64_ND
-
-from assetlife.lifetime_models import init_distrib_params_from_lifetimes, init_regression_params_from_lifetimes
+from assetlife.lifetime_models._distributions import (
+    Gamma,
+    LifetimeDistribution,
+    get_distrib_params_bounds,
+)
+from assetlife.lifetime_models._parametric_regressions import (
+    ParametricLifetimeRegression,
+    get_regression_params_bounds,
+)
+from assetlife.typing import (
+    CoercibleFloat64_ND,
+    CovarTs,
+    Float64_ND,
+)
 
 
 class NHPPData:
@@ -109,7 +122,7 @@ class NHPPLikelihood(
     def nb_observations(self) -> int:
         n = self.data.failures_time.size
         if self.data.has_partial:
-            n += self.data.partial_observations_count.size #TODO: typing for None case
+            n += self.data.partial_observations_count.size  # TODO: typing for None case
         return n
 
     def negative_log(self, params: onp.Array1D[np.float64]) -> float:
@@ -172,8 +185,8 @@ class NHPPLikelihood(
 
     def _jac_partial_observation_contrib(self) -> onp.ArrayND[np.float64]:
         if not self.data.has_partial:
-            return np.zeros_like(self.model.get_params(),dtype=np.float64)
-        
+            return np.zeros_like(self.model.get_params(), dtype=np.float64)
+
         # TODO : typing for None case
         a = self.model.jac_chf(
             self.data.partial_observations_end,
@@ -190,11 +203,11 @@ class NHPPLikelihood(
         return np.sum(jac, axis=1)
 
 
-def init_nhpp_likelihood(model: FittableParametricLifetimeModel,failures: pd.DataFrame,
+def init_nhpp_likelihood(model: FittableParametricLifetimeModel, failures: pd.DataFrame,
         assets: pd.DataFrame,
         covariates: list[str] | None,
-        partial_observations: pd.DataFrame | None,**kwargs: Any,) -> NHPPLikelihood:
-    data = NHPPData(failures,assets,covariates,partial_observations)
+        partial_observations: pd.DataFrame | None, **kwargs: Any) -> NHPPLikelihood:
+    data = NHPPData(failures, assets, covariates, partial_observations)
     fresh_model = type(model)()
 
     if isinstance(fresh_model, LifetimeDistribution):
@@ -221,10 +234,10 @@ def init_nhpp_likelihood(model: FittableParametricLifetimeModel,failures: pd.Dat
             )
     else:
         raise ValueError(f"Cannot initiate NHPP likelihood with the model {model}, expected Parametric Distribution or Regression.")
-    
-    
+
     config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
     return NHPPLikelihood(fresh_model, data, config)
+
 
 class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
 
@@ -291,8 +304,8 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         **kwargs: Any,
     ):
         optimizer = init_nhpp_likelihood(
-            self.lifetime_model,failures,assets,covariates,partial_observations, **kwargs
-        ) # TODO: typing for non-fittable case
+            self.lifetime_model, failures, assets, covariates, partial_observations, **kwargs
+        )  # TODO: typing for non-fittable case
         fitting_results = optimizer.optimize()
         self.set_params(fitting_results.optimal_params)
         self.fitting_results = fitting_results
