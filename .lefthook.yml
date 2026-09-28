@@ -1,0 +1,29 @@
+templates:
+  run: run --no-sync
+
+pre-commit:
+  parallel: true
+  skip:
+    - merge
+    - rebase
+  jobs:
+    - name: uv lock
+      glob: pyproject.toml
+      stage_fixed: true
+      run: uv lock
+
+    - name: format
+      glob: "*.{py,pyi}"
+      stage_fixed: true
+      run: uv {run} ruff format --quiet {staged_files}
+
+post-checkout:
+  jobs:
+    - run: uv sync
+      glob: uv.lock
+
+post-merge:
+  files: "git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD"
+  jobs:
+    - run: uv sync
+      glob: uv.lock

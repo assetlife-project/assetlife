@@ -80,7 +80,7 @@ class _Parameters:
 
 class ParametricModel:
     """
-    Base class for ReLife models with parameters.
+    Base class for models with parameters.
 
     The class stores parameters in a tree structure, exposes them as a flat
     vector with ``get_params`` and ``set_params``, and tracks fitting results.

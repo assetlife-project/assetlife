@@ -1,14 +1,14 @@
 """
-``relife.lifetime_model``
+``assetlife.lifetime_model``
 =========================
 
-The ReLife lifetime_model module exposes various stochastic models to modelize
+The lifetime_model module exposes various stochastic models to modelize
 lifetime data. Internal operations are computed using NumPy and Scipy.
 
 - NumPy: https://github.com/numpy/numpy
 - Scipy: https://github.com/scipy/scipy
 
-Objects present in relife.lifetime_model are listed below.
+Objects present in assetlife.lifetime_model are listed below.
 
 Lifetime distributions
 ----------------------
