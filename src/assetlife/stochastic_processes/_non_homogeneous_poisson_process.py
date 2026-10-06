@@ -145,7 +145,7 @@ class NHPPLikelihood(
         )
 
     def _jac_exact_events_contrib(self) -> onp.ArrayND[np.float64]:
-        jac = -self.model.jac_hf(self.data.failures_time, *self.data.failures_covars)
+        jac = -self.model.jac_hf(self.data.failures_time, *self.data.failures_covars) / self.model.hf(self.data.failures_time, *self.data.failures_covars)
         return np.sum(jac, axis=1)
 
     def _observation_period_contrib(self) -> float:
