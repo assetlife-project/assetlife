@@ -18,17 +18,13 @@ from assetlife.base import (
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,
     ParametricLifetimeModel,
-    init_distrib_params_from_lifetimes,
-    init_regression_params_from_lifetimes,
 )
 from assetlife.lifetime_models._distributions import (
     Gamma,
     LifetimeDistribution,
-    get_distrib_params_bounds,
 )
 from assetlife.lifetime_models._parametric_regressions import (
     ParametricLifetimeRegression,
-    get_regression_params_bounds,
 )
 from assetlife.typing import (
     CoercibleFloat64_ND,
@@ -220,18 +216,11 @@ def init_nhpp_likelihood(
     data = NHPPData(failures, assets, covariates, partial_observations)
 
     if isinstance(model, LifetimeDistribution):
-        fresh_model = type(model)()
         if (covariates is not None) and len(covariates) > 0:
             msg = "No covariates can be given for fit when using a distribution."
             raise ValueError(msg)
-        x0 = kwargs.get(
-            "x0", init_distrib_params_from_lifetimes(fresh_model, data.failures_time)
-        )
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", get_distrib_params_bounds(fresh_model)
-        )
-        config.covariance_method = kwargs.get(
+        fresh_model = type(model)()
+        covariance_method = kwargs.get(
             "covariance_method", "2point" if isinstance(fresh_model, Gamma) else "cs"
         )
     elif isinstance(model, ParametricLifetimeRegression):
@@ -241,14 +230,7 @@ def init_nhpp_likelihood(
         fresh_model = type(model)(
             type(model.baseline)(), coefficients=(0.0,) * len(covariates)
         )
-        x0 = kwargs.get(
-            "x0", init_regression_params_from_lifetimes(fresh_model, data.failures_time)
-        )
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", get_regression_params_bounds(fresh_model)
-        )
-        config.covariance_method = kwargs.get(
+        covariance_method = kwargs.get(
             "covariance_method",
             "2point" if isinstance(fresh_model.baseline, Gamma) else "cs",
         )
@@ -256,6 +238,12 @@ def init_nhpp_likelihood(
         msg = f"Cannot initiate NHPP likelihood with the model {model}, expected Parametric Distribution or Regression."
         raise TypeError(msg)
 
+    x0 = kwargs.get("x0", fresh_model.init_params_from_lifetime(data.failures_time))
+    config = FitConfig(x0)
+    config.scipy_minimize_options["bounds"] = kwargs.get(
+        "bounds", fresh_model.param_bounds
+    )
+    config.covariance_method = covariance_method
     config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
     return NHPPLikelihood(fresh_model, data, config)
 

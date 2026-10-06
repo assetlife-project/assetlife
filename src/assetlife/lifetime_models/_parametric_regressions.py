@@ -11,6 +11,7 @@ from __future__ import annotations
 from abc import ABC
 from collections.abc import Sequence
 from typing import Any, Literal, Self, final
+from optype.numpy._array import Array, Array1D
 from typing_extensions import override
 
 import numpy as np
@@ -28,8 +29,6 @@ from ._base import (
 from ._distributions import (
     Gamma,
     LifetimeDistribution,
-    get_distrib_params_bounds,
-    init_distrib_params_from_lifetimes,
 )
 from assetlife.base import FitConfig, FittingResults, ParametricModel
 from assetlife.typing import CoercibleFloat64_ND, Float64_ND
@@ -137,6 +136,20 @@ class ParametricLifetimeRegression(
         out : ndarray
         """
         return self.covar_effect.get_params()
+
+    @property
+    @override
+    def param_bounds(self) -> Bounds:
+        nb_coefficients = self.covar_effect.get_params().size
+        lb = np.concatenate((
+            np.full(nb_coefficients, -np.inf),
+            self.baseline.param_bounds.lb,
+        ))
+        ub = np.concatenate((
+            np.full(nb_coefficients, np.inf),
+            self.baseline.param_bounds.ub,
+        ))
+        return Bounds(lb, ub)
 
     @override
     @document_args(base_cls=ParametricLifetimeModel, args_docstring=_covar_docstring)
@@ -257,6 +270,21 @@ class ParametricLifetimeRegression(
         )
 
     @override
+    def init_params_from_lifetime(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        """
+        Init method based on statistical heuristics to init parameters of a regression before fit.
+        Covariates coefficients are init to 0, baseline coefficients are init based on distribution heuristics.
+        """
+        param0 = np.zeros_like(self.get_params(), dtype=np.float64)
+        param0[-self.baseline.get_params().size :] = (
+            self.baseline.init_params_from_lifetime(time)
+        )
+        return param0
+
+    @override
     def init_likelihood(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
@@ -270,13 +298,11 @@ class ParametricLifetimeRegression(
             type(self.baseline)(), coefficients=(0.0,) * len(args)
         )  # init new regression object with appropriate number of covar
         lifetime_data = LifetimeData(time, event, entry, args)
-        x0 = kwargs.get(
-            "x0", init_regression_params_from_lifetimes(fresh_regression, time)
-        )
+        x0 = kwargs.get("x0", fresh_regression.init_params_from_lifetime(time))
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", get_regression_params_bounds(fresh_regression)
+            "bounds", fresh_regression.param_bounds
         )
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         config.covariance_method = kwargs.get(
@@ -303,35 +329,6 @@ class ParametricLifetimeRegression(
         self.set_params(self.fitting_results.optimal_params)
 
         return self
-
-
-def init_regression_params_from_lifetimes(
-    model: ParametricLifetimeRegression, time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]
-) -> onp.Array1D[np.float64]:
-    """
-    Init method based on statistical heuristics to init parameters of a regression before fit.
-    Covariates coefficients are init to 0, baseline coefficients are init based on distribution heuristics.
-    """
-    param0 = np.zeros_like(model.get_params(), dtype=np.float64)
-    param0[-model.baseline.get_params().size :] = init_distrib_params_from_lifetimes(
-        model.baseline, time
-    )
-    return param0
-
-
-def get_regression_params_bounds(model: ParametricLifetimeRegression) -> Bounds:
-    nb_coefficients = model.covar_effect.get_params().size
-    lb = np.concatenate((
-        np.full(nb_coefficients, -np.inf),
-        get_distrib_params_bounds(
-            model.baseline
-        ).lb,  # baseline has _params_bounds according to typing
-    ))
-    ub = np.concatenate((
-        np.full(nb_coefficients, np.inf),
-        get_distrib_params_bounds(model.baseline).ub,
-    ))
-    return Bounds(lb, ub)
 
 
 @final
