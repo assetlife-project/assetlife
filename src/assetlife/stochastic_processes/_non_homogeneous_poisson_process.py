@@ -205,49 +205,6 @@ class NHPPLikelihood(
         return np.sum(jac, axis=1)
 
 
-def init_nhpp_likelihood(
-    model: FittableParametricLifetimeModel,
-    failures: pd.DataFrame,
-    assets: pd.DataFrame,
-    covariates: list[str] | None = None,
-    partial_observations: pd.DataFrame | None = None,
-    **kwargs: Any,
-) -> NHPPLikelihood:
-    data = NHPPData(failures, assets, covariates, partial_observations)
-
-    if isinstance(model, LifetimeDistribution):
-        if (covariates is not None) and len(covariates) > 0:
-            msg = "No covariates can be given for fit when using a distribution."
-            raise ValueError(msg)
-        fresh_model = type(model)()
-        covariance_method = kwargs.get(
-            "covariance_method", "2point" if isinstance(fresh_model, Gamma) else "cs"
-        )
-    elif isinstance(model, ParametricLifetimeRegression):
-        if (covariates is None) or len(covariates) == 0:
-            msg = "Covariates must be given for fit when using a regression."
-            raise ValueError(msg)
-        fresh_model = type(model)(
-            type(model.baseline)(), coefficients=(0.0,) * len(covariates)
-        )
-        covariance_method = kwargs.get(
-            "covariance_method",
-            "2point" if isinstance(fresh_model.baseline, Gamma) else "cs",
-        )
-    else:
-        msg = f"Cannot initiate NHPP likelihood with the model {model}, expected Parametric Distribution or Regression."
-        raise TypeError(msg)
-
-    x0 = kwargs.get("x0", fresh_model.init_params_from_time(data.failures_time))
-    config = FitConfig(x0)
-    config.scipy_minimize_options["bounds"] = kwargs.get(
-        "bounds", fresh_model.get_params_bounds()
-    )
-    config.covariance_method = covariance_method
-    config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
-    return NHPPLikelihood(fresh_model, data, config)
-
-
 class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
     fitting_results: FittingResults | None
     lifetime_model: ParametricLifetimeModel[*CovarTs]  # not accurate is case of fit
@@ -303,6 +260,50 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         """
         return self.lifetime_model.chf(time, *args)
 
+    def init_likelihood(
+        self,
+        failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None = None,
+        partial_observations: pd.DataFrame | None = None,
+        **kwargs: Any,
+    ) -> NHPPLikelihood:
+        data = NHPPData(failures, assets, covariates, partial_observations)
+
+        if isinstance(self.lifetime_model, LifetimeDistribution):
+            if (covariates is not None) and len(covariates) > 0:
+                msg = "No covariates can be given for fit when using a distribution."
+                raise ValueError(msg)
+            fresh_model = type(self.lifetime_model)()
+            covariance_method = kwargs.get(
+                "covariance_method",
+                "2point" if isinstance(fresh_model, Gamma) else "cs",
+            )
+        elif isinstance(self.lifetime_model, ParametricLifetimeRegression):
+            if (covariates is None) or len(covariates) == 0:
+                msg = "Covariates must be given for fit when using a regression."
+                raise ValueError(msg)
+            fresh_model = type(self.lifetime_model)(
+                type(self.lifetime_model.baseline)(),
+                coefficients=(0.0,) * len(covariates),
+            )
+            covariance_method = kwargs.get(
+                "covariance_method",
+                "2point" if isinstance(fresh_model.baseline, Gamma) else "cs",
+            )
+        else:
+            msg = f"Cannot initiate NHPP likelihood with the model {self.lifetime_model}, expected Parametric Distribution or Regression."
+            raise TypeError(msg)
+
+        x0 = kwargs.get("x0", fresh_model.init_params_from_time(data.failures_time))
+        config = FitConfig(x0)
+        config.scipy_minimize_options["bounds"] = kwargs.get(
+            "bounds", fresh_model.get_params_bounds()
+        )
+        config.covariance_method = covariance_method
+        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
+        return NHPPLikelihood(fresh_model, data, config)
+
     def fit(
         self,
         failures: pd.DataFrame,
@@ -311,14 +312,13 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         partial_observations: pd.DataFrame | None = None,
         **kwargs: Any,
     ) -> Self:
-        optimizer = init_nhpp_likelihood(
-            self.lifetime_model,
+        optimizer = self.init_likelihood(
             failures,
             assets,
             covariates,
             partial_observations,
             **kwargs,
-        )  # TODO: typing for non-fittable case
+        )
         fitting_results = optimizer.optimize()
         if isinstance(self.lifetime_model, ParametricLifetimeRegression):
             if (covariates is None) or len(covariates) == 0:
