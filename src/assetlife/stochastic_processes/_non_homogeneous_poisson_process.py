@@ -238,10 +238,10 @@ def init_nhpp_likelihood(
         msg = f"Cannot initiate NHPP likelihood with the model {model}, expected Parametric Distribution or Regression."
         raise TypeError(msg)
 
-    x0 = kwargs.get("x0", fresh_model.init_params_from_lifetime(data.failures_time))
+    x0 = kwargs.get("x0", fresh_model.init_params_from_time(data.failures_time))
     config = FitConfig(x0)
     config.scipy_minimize_options["bounds"] = kwargs.get(
-        "bounds", fresh_model.param_bounds
+        "bounds", fresh_model.get_params_bounds()
     )
     config.covariance_method = covariance_method
     config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")

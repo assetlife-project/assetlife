@@ -1009,9 +1009,8 @@ def estimate_se(
 class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
     """Base class for parametric lifetime models that can be fitted."""
 
-    @property
     @abstractmethod
-    def param_bounds(self) -> Bounds:
+    def get_params_bounds(self) -> Bounds:
         """The optimization Bounds for each parameter to fit
 
         Returns:
@@ -1150,11 +1149,11 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         return jac
 
     @abstractmethod
-    def init_params_from_lifetime(
+    def init_params_from_time(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
     ) -> onp.Array1D[np.float64]:
-        """Init params with statistical heuristics from lifetimes
+        """Init params with statistical heuristics from time data.
 
         Parameters
             time (onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]): Lifetimes to init from

@@ -40,9 +40,8 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
 
     fitting_results: FittingResults | None
 
-    @property
     @override
-    def param_bounds(self) -> Bounds:
+    def get_params_bounds(self) -> Bounds:
         nb_params = self.get_params().size
         return Bounds(
             np.full(nb_params, np.finfo(float).resolution),
@@ -131,7 +130,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         )
 
     @override
-    def init_params_from_lifetime(
+    def init_params_from_time(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
@@ -154,10 +153,10 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         assert args is None
         lifetime_data = LifetimeData(time, event=event, entry=entry)
         fresh_distrib = type(self)()
-        x0 = kwargs.get("x0", fresh_distrib.init_params_from_lifetime(time))
+        x0 = kwargs.get("x0", fresh_distrib.init_params_from_time(time))
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_distrib.param_bounds
+            "bounds", fresh_distrib.get_params_bounds()
         )
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         config.covariance_method = kwargs.get(
@@ -603,7 +602,7 @@ class Gompertz(LifetimeDistribution):
         return f"Gompertz(shape={params[0].item()!r}, rate={params[1].item()!r})"
 
     @override
-    def init_params_from_lifetime(
+    def init_params_from_time(
         self,
         time: np.ndarray[tuple[int], np.dtype[np.float64]]
         | np.ndarray[tuple[int, Literal[2]], np.dtype[np.float64]],

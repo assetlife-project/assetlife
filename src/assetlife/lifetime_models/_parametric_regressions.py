@@ -137,17 +137,16 @@ class ParametricLifetimeRegression(
         """
         return self.covar_effect.get_params()
 
-    @property
     @override
-    def param_bounds(self) -> Bounds:
+    def get_params_bounds(self) -> Bounds:
         nb_coefficients = self.covar_effect.get_params().size
         lb = np.concatenate((
             np.full(nb_coefficients, -np.inf),
-            self.baseline.param_bounds.lb,
+            self.baseline.get_params_bounds().lb,
         ))
         ub = np.concatenate((
             np.full(nb_coefficients, np.inf),
-            self.baseline.param_bounds.ub,
+            self.baseline.get_params_bounds().ub,
         ))
         return Bounds(lb, ub)
 
@@ -270,7 +269,7 @@ class ParametricLifetimeRegression(
         )
 
     @override
-    def init_params_from_lifetime(
+    def init_params_from_time(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
     ) -> onp.Array1D[np.float64]:
@@ -280,7 +279,7 @@ class ParametricLifetimeRegression(
         """
         param0 = np.zeros_like(self.get_params(), dtype=np.float64)
         param0[-self.baseline.get_params().size :] = (
-            self.baseline.init_params_from_lifetime(time)
+            self.baseline.init_params_from_time(time)
         )
         return param0
 
@@ -298,11 +297,11 @@ class ParametricLifetimeRegression(
             type(self.baseline)(), coefficients=(0.0,) * len(args)
         )  # init new regression object with appropriate number of covar
         lifetime_data = LifetimeData(time, event, entry, args)
-        x0 = kwargs.get("x0", fresh_regression.init_params_from_lifetime(time))
+        x0 = kwargs.get("x0", fresh_regression.init_params_from_time(time))
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_regression.param_bounds
+            "bounds", fresh_regression.get_params_bounds()
         )
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         config.covariance_method = kwargs.get(
