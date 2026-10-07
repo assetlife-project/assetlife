@@ -133,7 +133,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
     def init_params_from_time(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    ) -> onp.Array1D[np.float64]:
         # flatten in case of 2D time
         flatten_time = time.flatten()
         nb_params = self.get_params().size
@@ -604,9 +604,8 @@ class Gompertz(LifetimeDistribution):
     @override
     def init_params_from_time(
         self,
-        time: np.ndarray[tuple[int], np.dtype[np.float64]]
-        | np.ndarray[tuple[int, Literal[2]], np.dtype[np.float64]],
-    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
         # flatten in case of 2D time
         flatten_time = time.flatten()
         nb_params = self.get_params().size
