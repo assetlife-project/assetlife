@@ -2,40 +2,244 @@
 
 from __future__ import annotations
 
-import warnings
-from collections.abc import Sequence
-from dataclasses import field
-from typing import Any, Generic, Self, no_type_check
+from typing import Any, Generic, Self
 from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
+import pandas as pd
 
-from assetlife.base import FittingResults, ParametricModel
+from assetlife.base import (
+    FitConfig,
+    FittingResults,
+    MaximumLikelihoodOptimizer,
+    ParametricModel,
+)
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,
     ParametricLifetimeModel,
 )
-from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
+from assetlife.lifetime_models._distributions import (
+    Gamma,
+    LifetimeDistribution,
+)
+from assetlife.lifetime_models._parametric_regressions import (
+    ParametricLifetimeRegression,
+)
+from assetlife.typing import (
+    CoercibleFloat64_ND,
+    CovarTs,
+    Float64_ND,
+)
+
+
+class NHPPData:
+    failures_time: onp.Array1D[np.float64]
+    failures_covars: tuple[Any, ...]  # TODO: fix
+    observations_start: onp.Array1D[np.float64]
+    observations_end: onp.Array1D[np.float64]
+    observations_covars: tuple[Any, ...]  # TODO: fix
+    covariates: list[str]
+    has_partial: bool
+    partial_observations_count = onp.Array1D[np.int64] | None
+    partial_observations_start = onp.Array1D[np.float64] | None
+    partial_observations_end = onp.Array1D[np.float64] | None
+    partial_observations_covars = tuple[Any, ...] | None  # TODO: fix
+
+    def __init__(
+        self,
+        failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None = None,
+        partial_observations: pd.DataFrame | None = None,
+    ) -> None:
+        """Init NHPP data from DataFrames to be used efficiently in Likelihood optimizer
+
+        Parameters
+        ----------
+        failures : pd.DataFrame
+            Table of failure observed times per asset
+        assets : pd.DataFrame
+            Table of assets properties, including observation window and possible covariates
+        covariates : list[str] | None, optional
+            List of columns of the asset table to use as covariates. Defaults to None.
+        partial_observations : pd.DataFrame | None, optional
+            Optional partial observations, a number of events per time window. Defaults to None.
+        """
+
+        if covariates is None:
+            covariates = []
+        self.covariates = covariates
+
+        assets_covariates = assets[["id", *self.covariates]]
+
+        # Get covariates for each failure time, using asset id as primary key
+        failures_merged = failures.merge(assets_covariates, how="left", on="id")
+        self.failures_time = failures_merged["time"].to_numpy(dtype=np.float64)
+        self.failures_covars = tuple(
+            failures_merged[covar] for covar in self.covariates
+        )
+
+        # Same for observation periods
+        self.observations_start = assets["start"].to_numpy(dtype=np.float64)
+        self.observations_end = assets["end"].to_numpy(dtype=np.float64)
+        self.observations_covars = tuple(
+            assets[covar].to_numpy() for covar in self.covariates
+        )
+
+        # If partial observations are given, merge covariates with each time period and count
+        if partial_observations is None:
+            self.has_partial = False
+            self.partial_observations_count = None
+            self.partial_observations_start = None
+            self.partial_observations_end = None
+            self.partial_observations_covars = None
+        else:
+            self.has_partial = True
+            partial_observations_merged = partial_observations.merge(
+                assets_covariates, how="left", on="id"
+            )
+            self.partial_observations_count = partial_observations_merged[
+                "count"
+            ].to_numpy(dtype=np.int64)
+            self.partial_observations_start = partial_observations_merged[
+                "start"
+            ].to_numpy(dtype=np.float64)
+            self.partial_observations_end = partial_observations_merged["end"].to_numpy(
+                dtype=np.float64
+            )
+            self.partial_observations_covars = tuple(
+                partial_observations_merged[covar].to_numpy()
+                for covar in self.covariates
+            )
+
+
+class NHPPLikelihood(
+    MaximumLikelihoodOptimizer[
+        FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]], NHPPData
+    ]
+):
+    def __init__(
+        self,
+        model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],
+        data: NHPPData,
+        config: FitConfig,
+    ) -> None:
+        self.model = model
+        self.data = data
+        self.config = config
+        if "jac" not in self.config.scipy_minimize_options:
+            self.config.scipy_minimize_options["jac"] = self.jac_negative_log
+
+    @property
+    def nb_observations(self) -> int:
+        n = self.data.failures_time.size
+        if self.data.has_partial:
+            n += self.data.partial_observations_count.size  # TODO: typing for None case
+        return n
+
+    def negative_log(self, params: onp.Array1D[np.float64]) -> float:
+        self.model.set_params(params)
+        return (
+            self._exact_events_contrib()
+            + self._observation_period_contrib()
+            + self._partial_observation_contrib()
+        )
+
+    def jac_negative_log(
+        self, params: onp.Array1D[np.float64]
+    ) -> onp.Array1D[np.float64]:
+        self.model.set_params(params)
+        return (
+            self._jac_exact_events_contrib()
+            + self._jac_observation_period_contrib()
+            + self._jac_partial_observation_contrib()
+        )
+
+    def _exact_events_contrib(self) -> float:
+        return -np.sum(
+            np.log(self.model.hf(self.data.failures_time, *self.data.failures_covars))
+        )
+
+    def _jac_exact_events_contrib(self) -> onp.ArrayND[np.float64]:
+        jac = -self.model.jac_hf(
+            self.data.failures_time, *self.data.failures_covars
+        ) / self.model.hf(self.data.failures_time, *self.data.failures_covars)
+        return np.sum(jac, axis=1)
+
+    def _observation_period_contrib(self) -> float:
+        return np.sum(
+            self.model.chf(self.data.observations_end, *self.data.observations_covars)
+            - self.model.chf(
+                self.data.observations_start, *self.data.observations_covars
+            )
+        )
+
+    def _jac_observation_period_contrib(self) -> onp.ArrayND[np.float64]:
+        jac = self.model.jac_chf(
+            self.data.observations_end, *self.data.observations_covars
+        ) - self.model.jac_chf(
+            self.data.observations_start, *self.data.observations_covars
+        )
+        return np.sum(jac, axis=1)
+
+    def _partial_observation_contrib(self) -> float:
+        if not self.data.has_partial:
+            return 0.0
+
+        # TODO : typing for None case
+        return np.sum(
+            -self.data.partial_observations_count
+            * np.log(
+                self.model.chf(
+                    self.data.partial_observations_end,
+                    *self.data.partial_observations_covars,
+                )
+                - self.model.chf(
+                    self.data.partial_observations_start,
+                    *self.data.partial_observations_covars,
+                )
+            )
+        )
+
+    def _jac_partial_observation_contrib(self) -> onp.ArrayND[np.float64]:
+        if not self.data.has_partial:
+            return np.zeros_like(self.model.get_params(), dtype=np.float64)
+
+        # TODO : typing for None case
+        a = self.model.jac_chf(
+            self.data.partial_observations_end,
+            *self.data.partial_observations_covars,
+        ) - self.model.jac_chf(
+            self.data.partial_observations_start, *self.data.partial_observations_covars
+        )
+        b = self.model.chf(
+            self.data.partial_observations_end, *self.data.partial_observations_covars
+        ) - self.model.chf(
+            self.data.partial_observations_start, *self.data.partial_observations_covars
+        )
+        jac = -self.data.partial_observations_count * (a / b)
+        return np.sum(jac, axis=1)
 
 
 class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
-    """
-    Non-homogeneous Poisson process.
+    """Non Homogeneous Poisson Process (NHPP)
 
     Parameters
     ----------
     lifetime_model : ParametricLifetimeModel
-        Lifetime model defining the process intensity.
+        Lifetime model that captures the NHPP intensity (lambda function) as its hazard function.
+    fitting_results: FittingResults | None
+        Fitting Results after fitting the NHPP with failure data.
     """
 
-    fitting_results: FittingResults | None
     lifetime_model: ParametricLifetimeModel[*CovarTs]  # not accurate is case of fit
+    fitting_results: FittingResults | None
 
     def __init__(
         self,
         lifetime_model: ParametricLifetimeModel[*CovarTs],
-    ):
+    ) -> None:
         super().__init__()
         self.lifetime_model = lifetime_model
 
@@ -83,106 +287,109 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         """
         return self.lifetime_model.chf(time, *args)
 
-    def freeze(self, *args: *CovarTs) -> FrozenNonHomogeneousPoissonProcess[*CovarTs]:
-        """
-        Return a process with additional arguments stored.
+    def init_likelihood(
+        self,
+        failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None = None,
+        partial_observations: pd.DataFrame | None = None,
+        **kwargs: Any,
+    ) -> NHPPLikelihood:
+        data = NHPPData(failures, assets, covariates, partial_observations)
 
-        Parameters
-        ----------
-        *args : float or np.ndarray
-            Additional arguments needed by the model.
+        if isinstance(self.lifetime_model, LifetimeDistribution):
+            if (covariates is not None) and len(covariates) > 0:
+                msg = "No covariates can be given for fit when using a distribution."
+                raise ValueError(msg)
+            fresh_model = type(self.lifetime_model)()
+            covariance_method = kwargs.get(
+                "covariance_method",
+                "2point" if isinstance(fresh_model, Gamma) else "cs",
+            )
+        elif isinstance(self.lifetime_model, ParametricLifetimeRegression):
+            if (covariates is None) or len(covariates) == 0:
+                msg = "Covariates must be given for fit when using a regression."
+                raise ValueError(msg)
+            fresh_model = type(self.lifetime_model)(
+                type(self.lifetime_model.baseline)(),
+                coefficients=(0.0,) * len(covariates),
+            )
+            covariance_method = kwargs.get(
+                "covariance_method",
+                "2point" if isinstance(fresh_model.baseline, Gamma) else "cs",
+            )
+        else:
+            msg = f"Cannot initiate NHPP likelihood with the model {self.lifetime_model}, expected Parametric Distribution or Regression."
+            raise TypeError(msg)
 
-        Returns
-        -------
-        FrozenNonHomogeneousPoissonProcess
-        """
-        return FrozenNonHomogeneousPoissonProcess(self, *args)
+        x0 = kwargs.get("x0", fresh_model.init_params_from_time(data.failures_time))
+        config = FitConfig(x0)
+        config.scipy_minimize_options["bounds"] = kwargs.get(
+            "bounds", fresh_model.get_params_bounds()
+        )
+        config.covariance_method = covariance_method
+        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
+        return NHPPLikelihood(fresh_model, data, config)
 
     def fit(
         self,
-        ages_at_events: onp.Array1D[np.float64],
-        events_assets_ids: Sequence[str],
-        first_ages: onp.Array1D[np.float64] | None = None,
-        last_ages: onp.Array1D[np.float64] | None = None,
-        lifetime_model_args: onp.Array1D[Any]
-        | onp.Array2D[Any]
-        | tuple[onp.Array1D[Any] | onp.Array2D[Any], ...]
-        | None = None,
-        assets_ids: Sequence[str] | None = None,
+        failures: pd.DataFrame,
+        assets: pd.DataFrame,
+        covariates: list[str] | None = None,
+        partial_observations: pd.DataFrame | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Estimate process parameters from recurrent failure data.
+        """Fit the NHPP parametric model with failure observation history.
 
         Parameters
         ----------
-        ages_at_events : 1d array of floats
-            Ages of each asset when events occurred.
-        events_assets_ids : sequence of hashable
-            Asset ids corresponding to ``ages_at_events``.
-        first_ages : 1d array of floats, optional
-            Asset ages before the observation period. If set, ``assets_ids`` is
-            required and must have the same length.
-        last_ages : 1d array of floats, optional
-            Asset ages at the end of the observation period. If set,
-            ``assets_ids`` is required and must have the same length.
-        lifetime_model_args : tuple of np.ndarray, optional
-            Additional arguments needed by the lifetime model. If set,
-            ``assets_ids`` is required. For 1d arrays, the size must equal the
-            length of ``assets_ids``. For 2d arrays, the first axis length must
-            equal the length of ``assets_ids``.
-        assets_ids : sequence of hashable, optional
-            Unique asset ids corresponding to values in ``first_ages``,
-            ``last_ages`` and/or ``lifetime_model_args``.
-
-        Returns
-        -------
-        Self
-            The current object with estimated parameters set in place.
+        failures : pd.DataFrame
+            Table of failure observed times per asset
+        assets : pd.DataFrame
+            Table of assets properties, including observation window and possible covariates
+        covariates : list[str] | None, optional
+            List of columns of the asset table to use as covariates. Defaults to None.
+        partial_observations : pd.DataFrame | None, optional
+            Optional partial observations, a number of events per time window. Defaults to None.
 
         Examples
         --------
-
-        Ages of assets AB2 and CX13 at each event.
-
-        >>> from assetlife.lifetime_models import Weibull
-        >>> from assetlife.stochastic_processes import NonHomogeneousPoissonProcess
-        >>> nhpp = NonHomogeneousPoissonProcess(Weibull())
-        >>> nhpp.fit(
-        ...     np.array([11.0, 13.0, 21.0, 25.0, 27.0]),
-        ...     ("AB2", "CX13", "AB2", "AB2", "CX13"),
-        ... )
-
-        With additional information and lifetime model args.
-
-        >>> from assetlife.lifetime_models import ParametricProportionalHazard
-        >>> nhpp = NonHomogeneousPoissonProcess(ParametricProportionalHazard())
-        >>> nhpp.fit(
-            np.array([11., 13., 21., 25., 27.]),
-            ("AB2", "CX13", "AB2", "AB2", "CX13"),
-            first_ages = np.array([10., 12.]),
-            last_ages = np.array([35., 60.]),
-            lifetime_model_args=(np.array([[1.2, 5.5], [37.2, 22.2]]),)
-        )
+        >>> failures
+            id  time
+        0   1   3.2
+        1   1   7.8
+        2   2   5.0
+        3   3   2.1
+        4   3   4.6
+        5   3   9.3
+        >>> assets
+            id  start   end  covar_1  covar_2
+        0   1    0.0  10.0      0.5       10
+        1   2    0.0  12.0      1.2       20
+        2   3    0.0  11.5      0.8       15
+        3   4    0.0   8.0      2.0       30
+        >>> covariates
+        ['covar_1', 'covar_2']
+        >>> partial_observations
+            id  start  end  count
+        0   4    0.0  4.0      1
+        1   4    4.0  8.0      2
         """
-        warnings.warn(
-            "Fit method of NHPP will change in a future release", DeprecationWarning
-        )
-        assert isinstance(self.lifetime_model, FittableParametricLifetimeModel)
-
-        nhpp_data = NHPPData(
-            ages_at_events,
-            events_assets_ids,
-            first_ages=first_ages,
-            last_ages=last_ages,
-            model_args=lifetime_model_args,
-            assets_ids=assets_ids,
-        )
-        time, event, entry, args = nhpp_data.to_lifetime_data()
-        optimizer = self.lifetime_model.init_likelihood(
-            time, args, event, entry, **kwargs
+        optimizer = self.init_likelihood(
+            failures,
+            assets,
+            covariates,
+            partial_observations,
+            **kwargs,
         )
         fitting_results = optimizer.optimize()
+        if isinstance(self.lifetime_model, ParametricLifetimeRegression):
+            if (covariates is None) or len(covariates) == 0:
+                msg = "Covariates must be given for fit when using a regression."
+                raise ValueError(msg)
+            self.lifetime_model.covar_effect.set_params(
+                [0.0] * len(covariates)
+            )  # modify nb coef inplace
         self.set_params(fitting_results.optimal_params)
         self.fitting_results = fitting_results
         return self
@@ -200,7 +407,7 @@ class FrozenNonHomogeneousPoissonProcess(
         self,
         nhpp: NonHomogeneousPoissonProcess[*CovarTs],
         *args: *CovarTs,
-    ):
+    ) -> None:
         super().__init__(nhpp.lifetime_model.freeze(*args))
         self.unfrozen = nhpp
         self.args = args
@@ -231,8 +438,6 @@ class FrozenNonHomogeneousPoissonProcess(
         ----------
         time : float or np.ndarray
             Elapsed time value(s) at which to compute the function.
-        *args : float or np.ndarray
-            Additional arguments needed by the model.
 
         Returns
         -------
@@ -240,211 +445,3 @@ class FrozenNonHomogeneousPoissonProcess(
             Function values at each given time(s).
         """
         return self.lifetime_model.chf(time)
-
-
-class NHPPData:
-    """Preprocessed recurrent event data for NHPP fitting."""
-
-    ages_at_events: onp.Array1D[np.float64]
-    events_assets_ids: onp.Array1D[np.uint32]
-    first_ages: onp.Array1D[np.float64] | None
-    last_ages: onp.Array1D[np.float64] | None
-    model_args: (
-        onp.Array1D[Any]
-        | onp.Array2D[Any]
-        | tuple[onp.Array1D[Any] | onp.Array2D[Any], ...]
-        | None
-    )
-    assets_ids: onp.Array1D[np.uint32] | None
-
-    first_age_index: onp.Array1D[np.int64] = field(repr=False, init=False)
-    last_age_index: onp.Array1D[np.int64] = field(repr=False, init=False)
-
-    def __init__(
-        self,
-        ages_at_events: onp.Array1D[np.float64],
-        events_assets_ids: Sequence[str],
-        first_ages: onp.Array1D[np.float64] | None = None,
-        last_ages: onp.Array1D[np.float64] | None = None,
-        model_args: onp.Array1D[Any]
-        | onp.Array2D[Any]
-        | tuple[onp.Array1D[Any] | onp.Array2D[Any], ...]
-        | None = None,
-        assets_ids: Sequence[str] | None = None,
-    ) -> None:
-
-        # convert inputs to arrays
-        self.ages_at_events = np.asarray(ages_at_events, dtype=np.float64)
-        self.events_assets_ids = np.unique(
-            np.asarray(events_assets_ids), return_inverse=True
-        )[1].astype(np.uint32)
-        self.assets_ids = None
-        if assets_ids is not None:
-            self.assets_ids = np.unique(np.asarray(assets_ids), return_inverse=True)[
-                1
-            ].astype(np.uint32)
-        self.first_ages = first_ages
-        self.last_ages = last_ages
-        self.model_args = model_args
-        self._sanity_checks()
-
-        # sort fields
-        sort_ind = np.lexsort((self.ages_at_events, self.events_assets_ids))
-        self.events_assets_ids = self.events_assets_ids[sort_ind]
-        self.ages_at_events = self.ages_at_events[sort_ind]
-
-        # number of age value per asset id
-        nb_ages_per_asset = np.unique_counts(self.events_assets_ids).counts
-        # index of the first ages and last ages in ages
-        self.first_age_index = np.where(
-            np.roll(self.events_assets_ids, 1) != self.events_assets_ids
-        )[0]
-        self.last_age_index = np.append(
-            self.first_age_index[1:] - 1, len(self.events_assets_ids) - 1
-        )
-
-        if self.assets_ids is not None:
-            # sort fields
-            sort_ind = np.argsort(self.assets_ids)
-            self.assets_ids = self.assets_ids[sort_ind]
-            self.first_ages = (
-                self.first_ages[sort_ind]
-                if self.first_ages is not None
-                else self.first_ages
-            )
-            self.last_ages = (
-                self.last_ages[sort_ind]
-                if self.last_ages is not None
-                else self.last_ages
-            )
-            self.model_args = (
-                tuple(arg[sort_ind] for arg in self.model_args)
-                if self.model_args is not None
-                else self.model_args
-            )
-
-            if self.first_ages is not None and np.any(
-                self.ages_at_events[self.first_age_index]
-                <= self.first_ages[nb_ages_per_asset != 0]
-            ):
-                raise ValueError(
-                    "Each first_ages value must be lower than all of its corresponding ages values"
-                )
-            if self.last_ages is not None and np.any(
-                self.ages_at_events[self.last_age_index]
-                >= self.last_ages[nb_ages_per_asset != 0]
-            ):
-                raise ValueError(
-                    "Each last_ages value must be greater than all of its corresponding ages values"
-                )
-
-    def _sanity_checks(self) -> None:
-        # control shapes
-        if self.events_assets_ids.ndim != 1:
-            raise ValueError(
-                "Invalid array shape for events_assets_ids. Expected 1d-array"
-            )
-        if self.ages_at_events.ndim != 1:
-            raise ValueError("Invalid array shape for ages. Expected 1d-array")
-        if len(self.events_assets_ids) != len(self.ages_at_events):
-            raise ValueError(
-                "Shape of events_assets_ids and ages must be equal. Expected equal length 1d-arrays"
-            )
-        if self.assets_ids is not None:
-            if self.assets_ids.ndim != 1:
-                raise ValueError(
-                    "Invalid array shape for assets_ids. Expected 1d-array"
-                )
-            if self.first_ages is not None:
-                if self.first_ages.ndim != 1:
-                    raise ValueError(
-                        "Invalid array shape for start_ages. Expected 1d-array"
-                    )
-                if len(self.first_ages) != len(self.assets_ids):
-                    raise ValueError(
-                        "Shape of assets_ids and start_ages must be equal. Expected equal length 1d-arrays"
-                    )
-            if self.last_ages is not None:
-                if self.last_ages.ndim != 1:
-                    raise ValueError(
-                        "Invalid array shape for last_ages. Expected 1d-array"
-                    )
-                if len(self.last_ages) != len(self.assets_ids):
-                    raise ValueError(
-                        "Shape of assets_ids and last_ages must be equal. Expected equal length 1d-arrays"
-                    )
-            if bool(self.model_args):
-                for arg in self.model_args:
-                    arg = np.atleast_2d(np.asarray(arg, dtype=np.float64))
-                    if arg.ndim > 2:
-                        raise ValueError(
-                            "Invalid arg shape in model_args. onp.Arrays must be 0, 1 or 2d"
-                        )
-                    try:
-                        _ = arg.reshape((len(self.assets_ids), -1))
-                    except ValueError as err:
-                        raise ValueError(
-                            """
-                            Invalid arg shape in model_args. onp.Arrays must
-                            coherent with the number of assets given by
-                            assets_ids
-                            """
-                        ) from err
-        else:
-            if self.first_ages is not None:
-                raise ValueError(
-                    "If first_ages is given, corresponding asset ids must be given in assets_ids"
-                )
-            if self.last_ages is not None:
-                raise ValueError(
-                    "If last_ages is given, corresponding asset ids must be given in assets_ids"
-                )
-            if bool(self.model_args):
-                raise ValueError(
-                    "If model_args is given, corresponding asset ids must be given in assets_ids"
-                )
-
-    @no_type_check
-    def to_lifetime_data(
-        self,
-    ) -> tuple[
-        onp.Array1D[np.float64],
-        onp.Array1D[np.bool_],
-        onp.Array1D[np.float64],
-        tuple[onp.Array1D[np.float64], ...],
-    ]:
-        """Return lifetime data arrays used by lifetime likelihood fitting."""
-        event = np.ones_like(self.ages_at_events, dtype=np.bool_)
-        # insert_index = np.cumsum(nb_ages_per_asset)
-        # insert_index = last_age_index + 1
-        if self.last_ages is not None:
-            time = np.insert(
-                self.ages_at_events, self.last_age_index + 1, self.last_ages
-            )
-            event = np.insert(event, self.last_age_index + 1, False)
-            _ids = np.insert(
-                self.events_assets_ids, self.last_age_index + 1, self.assets_ids
-            )
-            if self.first_ages is not None:
-                entry = np.insert(
-                    self.ages_at_events,
-                    np.insert((self.last_age_index + 1)[:-1], 0, 0),
-                    self.first_ages,
-                )
-            else:
-                entry = np.insert(self.ages_at_events, self.first_age_index, 0.0)
-        else:
-            time = self.ages_at_events.copy()
-            _ids = self.events_assets_ids.copy()
-            if self.first_ages is not None:
-                entry = np.roll(self.ages_at_events, 1)
-                entry[self.first_age_index] = self.first_ages
-            else:
-                entry = np.roll(self.ages_at_events, 1)
-                entry[self.first_age_index] = 0.0
-        model_args = (
-            tuple(np.take(arg, _ids) for arg in self.model_args)
-            if self.model_args is not None
-            else ()
-        )
-        return time, event, entry, model_args

@@ -26,7 +26,7 @@ import optype.numpy as onp
 from matplotlib.axes import Axes
 from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy import stats
-from scipy.optimize import newton
+from scipy.optimize import Bounds, newton
 
 from assetlife.base import FitConfig, MaximumLikelihoodOptimizer, ParametricModel
 from assetlife.quadratures import legendre_quadrature, unweighted_laguerre_quadrature
@@ -1010,6 +1010,14 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
     """Base class for parametric lifetime models that can be fitted."""
 
     @abstractmethod
+    def get_params_bounds(self) -> Bounds:
+        """The optimization Bounds for each parameter to fit
+
+        Returns:
+            Bounds: Bounds of the parameters
+        """
+
+    @abstractmethod
     def jac_hf(
         self,
         time: CoercibleFloat64_ND,
@@ -1139,6 +1147,20 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
             time, *args
         ) * self.hf(time, *args)
         return jac
+
+    @abstractmethod
+    def init_params_from_time(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        """Init params with statistical heuristics from time data.
+
+        Parameters
+            time (onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]): Lifetimes to init from
+
+        Returns:
+            onp.Array1D[np.float64]: Array of parameters initialized
+        """
 
     @abstractmethod
     def init_likelihood(

@@ -28,7 +28,7 @@ Lifetime regressions
     ParametricProportionalHazard
     ParametricAcceleratedFailureTime
 
-    
+
 Semiparametric lifetime regression
 ----------------------------------
 
@@ -48,6 +48,9 @@ Init parameters methods
 
     init_distrib_params_from_lifetimes
     init_regression_params_from_lifetimes
+    get_distrib_param_bounds
+    get_regression_params_bounds
+
 """
 
 from ._base import (
@@ -61,7 +64,6 @@ from ._distributions import (
     LifetimeDistribution,
     LogLogistic,
     Weibull,
-    init_distrib_params_from_lifetimes
 )
 from ._equilibrium_distribution import EquilibriumDistribution
 from ._minimum_distribution import MinimumDistribution
@@ -71,7 +73,6 @@ from ._parametric_regressions import (
     ParametricAcceleratedFailureTime,
     ParametricLifetimeRegression,
     ParametricProportionalHazard,
-    init_regression_params_from_lifetimes
 )
 from ._semi_parametric_regressions import SemiParametricProportionalHazard
 
@@ -99,4 +100,3 @@ __all__ += [
 ]
 __all__ += ["ECDF", "KaplanMeier", "NelsonAalen"]
 __all__ += ["SemiParametricProportionalHazard"]
-__all__ += ["init_distrib_params_from_lifetimes","init_regression_params_from_lifetimes"]

@@ -10,6 +10,7 @@ from typing import (
     Self,
     final,
 )
+from optype.numpy._array import Array, Array1D
 from typing_extensions import override
 
 import numpy as np
@@ -38,6 +39,14 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
     """
 
     fitting_results: FittingResults | None
+
+    @override
+    def get_params_bounds(self) -> Bounds:
+        nb_params = self.get_params().size
+        return Bounds(
+            np.full(nb_params, np.finfo(float).resolution),
+            np.full(nb_params, np.inf),
+        )
 
     @override
     @document_args(base_cls=ParametricLifetimeModel, args_docstring=[])
@@ -121,6 +130,18 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         )
 
     @override
+    def init_params_from_time(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        # flatten in case of 2D time
+        flatten_time = time.flatten()
+        nb_params = self.get_params().size
+        param0 = np.ones(nb_params, dtype=np.float64)
+        param0[-1] = 1 / np.median(flatten_time)
+        return param0
+
+    @override
     def init_likelihood(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
@@ -132,12 +153,10 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         assert args is None
         lifetime_data = LifetimeData(time, event=event, entry=entry)
         fresh_distrib = type(self)()
-        x0 = kwargs.get(
-            "x0", init_distrib_params_from_lifetimes(fresh_distrib, time)
-        )
+        x0 = kwargs.get("x0", fresh_distrib.init_params_from_time(time))
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", get_distrib_params_bounds(fresh_distrib)
+            "bounds", fresh_distrib.get_params_bounds()
         )
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         config.covariance_method = kwargs.get(
@@ -158,36 +177,6 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         self.set_params(self.fitting_results.optimal_params)
 
         return self
-
-
-def init_distrib_params_from_lifetimes(
-    model: LifetimeDistribution, time : onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64]
-) -> onp.Array1D[np.float64]:
-    """
-    Init method based on statistical heuristics to init parameters of a distribution before fit.
-    """
-    # flatten in case of 2D time
-    flatten_time = time.flatten()
-    nb_params = model.get_params().size
-    if isinstance(model, Gompertz):
-        param0 = np.empty(nb_params, dtype=np.float64)
-        rate = np.pi / (np.sqrt(6) * np.std(flatten_time))
-        shape = np.exp(-rate * np.mean(flatten_time))
-        param0[0] = shape
-        param0[1] = rate
-        return param0
-
-    param0 = np.ones(nb_params, dtype=np.float64)
-    param0[-1] = 1 / np.median(flatten_time)
-    return param0
-
-
-def get_distrib_params_bounds(model: LifetimeDistribution) -> Bounds:
-    nb_params = model.get_params().size
-    return Bounds(
-        np.full(nb_params, np.finfo(float).resolution),
-        np.full(nb_params, np.inf),
-    )
 
 
 @final
@@ -611,6 +600,21 @@ class Gompertz(LifetimeDistribution):
     def __repr__(self) -> str:
         params = self.get_params()
         return f"Gompertz(shape={params[0].item()!r}, rate={params[1].item()!r})"
+
+    @override
+    def init_params_from_time(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        # flatten in case of 2D time
+        flatten_time = time.flatten()
+        nb_params = self.get_params().size
+        param0 = np.empty(nb_params, dtype=np.float64)
+        rate = np.pi / (np.sqrt(6) * np.std(flatten_time))
+        shape = np.exp(-rate * np.mean(flatten_time))
+        param0[0] = shape
+        param0[1] = rate
+        return param0
 
 
 @final
