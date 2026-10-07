@@ -18,6 +18,8 @@ from typing_extensions import override
 
 import numpy as np
 import optype.numpy as onp
+import pickle
+from pathlib import Path
 from scipy import stats
 from scipy.optimize import approx_fprime, minimize
 
@@ -160,6 +162,40 @@ class ParametricModel:
             # thus changing model params will affect each component params
             self._params.set_leaf(f"{name}.params", value._params)
         super().__setattr__(name, value)
+
+    def save(self, path: str | Path) -> None:
+        """
+        Save model to pickle file.
+
+        Parameters
+        ----------
+        path: str or Path
+            Pickle filepath.
+
+        """
+        with Path(path).open("wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, path: str | Path) -> ParametricModel:
+        """
+        Load model from pickle file.
+
+        Parameters
+        ----------
+        path: str or Path
+            Pickle filepath.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the path doesn't exist.
+        """
+        if not Path(path).exists():
+            raise FileNotFoundError(path)
+
+        with Path(path).open("rb") as f:
+            return pickle.load(f)
 
 
 @dataclass

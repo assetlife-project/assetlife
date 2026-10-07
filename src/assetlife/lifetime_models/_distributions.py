@@ -171,7 +171,47 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         entry: onp.Array1D[np.float64] | None = None,
         **kwargs: Any,
     ) -> Self:
+        """
+        Estimate the model parameters from lifetime data.
 
+        Parameters
+        ----------
+        time : ndarray of shape (n_samples,) or (n_samples, 2)
+            Observed lifetimes.
+
+            - If 1D, each value is either a complete or a right-censored
+              lifetime. Use ``event`` to indicate which values are
+              right-censored.
+            - If 2D, each row encodes a lifetime as an interval
+              ``[lower, upper]``. A complete lifetime is encoded as ``[x, x]``,
+              a right-censored lifetime as ``[x, np.inf]``, a left-censored
+              lifetime as ``[0., x]``, and an interval-censored lifetime as
+              ``[a, b]``. In this format, ``event`` is ignored.
+        event : ndarray of shape (n_samples,) of bool, default None
+            Event indicators for 1D ``time``: ``True`` if the lifetime is
+            complete (failure observed), ``False`` if it is right-censored.
+            If None, all lifetimes are considered complete.
+        entry : ndarray of shape (n_samples,), default None
+            Left-truncation times, i.e. the age at which each sample entered
+            observation. If None, no left truncation is applied.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+            which searches for the parameters minimizing the negative
+            log-likelihood.
+
+            The additional keyword ``covariance_method`` controls how the
+            covariance matrix of the estimated parameters is computed. Allowed
+            values are ``"cs"``, ``"2point"``, ``"exact"`` or ``False``. If
+            ``False``, the covariance is not estimated. If ``"exact"``, ``hess``
+            must also be provided. If not set, the model's default method is
+            used.
+
+        Returns
+        -------
+        self : ParametricLifetimeRegression
+            The fitted model. Estimated parameters are set in place.
+        """
         optimizer = self.init_likelihood(time, event=event, entry=entry, **kwargs)
         self.fitting_results = optimizer.optimize()
         self.set_params(self.fitting_results.optimal_params)
