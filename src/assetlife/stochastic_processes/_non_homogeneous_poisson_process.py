@@ -53,24 +53,41 @@ class NHPPData:
         covariates: list[str] | None = None,
         partial_observations: pd.DataFrame | None = None,
     ) -> None:
+        """Init NHPP data from DataFrames to be used efficiently in Likelihood optimizer
+
+        Parameters
+        ----------
+        failures : pd.DataFrame
+            Table of failure observed times per asset
+        assets : pd.DataFrame
+            Table of assets properties, including observation window and possible covariates
+        covariates : list[str] | None, optional
+            List of columns of the asset table to use as covariates. Defaults to None.
+        partial_observations : pd.DataFrame | None, optional
+            Optional partial observations, a number of events per time window. Defaults to None.
+        """
+
         if covariates is None:
             covariates = []
         self.covariates = covariates
 
         assets_covariates = assets[["id", *self.covariates]]
 
+        # Get covariates for each failure time, using asset id as primary key
         failures_merged = failures.merge(assets_covariates, how="left", on="id")
         self.failures_time = failures_merged["time"].to_numpy(dtype=np.float64)
         self.failures_covars = tuple(
             failures_merged[covar] for covar in self.covariates
         )
 
+        # Same for observation periods
         self.observations_start = assets["start"].to_numpy(dtype=np.float64)
         self.observations_end = assets["end"].to_numpy(dtype=np.float64)
         self.observations_covars = tuple(
             assets[covar].to_numpy() for covar in self.covariates
         )
 
+        # If partial observations are given, merge covariates with each time period and count
         if partial_observations is None:
             self.has_partial = False
             self.partial_observations_count = None
@@ -206,8 +223,18 @@ class NHPPLikelihood(
 
 
 class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
+    """Non Homogeneous Poisson Process (NHPP)
+
+    Parameters
+    ----------
+    lifetime_model : ParametricLifetimeModel
+        Lifetime model that captures the NHPP intensity (lambda function) as its hazard function.
     fitting_results: FittingResults | None
+        Fitting Results after fitting the NHPP with failure data.
+    """
+
     lifetime_model: ParametricLifetimeModel[*CovarTs]  # not accurate is case of fit
+    fitting_results: FittingResults | None
 
     def __init__(
         self,
@@ -312,6 +339,42 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         partial_observations: pd.DataFrame | None = None,
         **kwargs: Any,
     ) -> Self:
+        """Fit the NHPP parametric model with failure observation history.
+
+        Parameters
+        ----------
+        failures : pd.DataFrame
+            Table of failure observed times per asset
+        assets : pd.DataFrame
+            Table of assets properties, including observation window and possible covariates
+        covariates : list[str] | None, optional
+            List of columns of the asset table to use as covariates. Defaults to None.
+        partial_observations : pd.DataFrame | None, optional
+            Optional partial observations, a number of events per time window. Defaults to None.
+
+        Examples
+        --------
+        >>> failures
+            id  time
+        0   1   3.2
+        1   1   7.8
+        2   2   5.0
+        3   3   2.1
+        4   3   4.6
+        5   3   9.3
+        >>> assets
+            id  start   end  covar_1  covar_2
+        0   1    0.0  10.0      0.5       10
+        1   2    0.0  12.0      1.2       20
+        2   3    0.0  11.5      0.8       15
+        3   4    0.0   8.0      2.0       30
+        >>> covariates
+        ['covar_1', 'covar_2']
+        >>> partial_observations
+            id  start  end  count
+        0   4    0.0  4.0      1
+        1   4    4.0  8.0      2
+        """
         optimizer = self.init_likelihood(
             failures,
             assets,
