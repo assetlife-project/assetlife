@@ -28,6 +28,7 @@ Lifetime regressions
     ParametricProportionalHazard
     ParametricAcceleratedFailureTime
 
+
 Semiparametric lifetime regression
 ----------------------------------
 
@@ -41,13 +42,15 @@ Nonparametric models
     ECDF
     NelsonAalen
 
-Likelihoods
------------
 
-    LifetimeLikelihood
-    CoxPartialLifetimeLikelihood
-    BreslowPartialLifetimeLikelihood
-    EfronPartialLifetimeLikelihood
+Init parameters methods
+-----------------------
+
+    init_distrib_params_from_lifetimes
+    init_regression_params_from_lifetimes
+    get_distrib_param_bounds
+    get_regression_params_bounds
+
 """
 
 from ._base import (

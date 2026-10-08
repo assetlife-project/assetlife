@@ -11,6 +11,7 @@ from __future__ import annotations
 from abc import ABC
 from collections.abc import Sequence
 from typing import Any, Literal, Self, final
+from optype.numpy._array import Array, Array1D
 from typing_extensions import override
 
 import numpy as np
@@ -28,8 +29,6 @@ from ._base import (
 from ._distributions import (
     Gamma,
     LifetimeDistribution,
-    get_distrib_params_bounds,
-    init_distrib_params_from_lifetimes,
 )
 from assetlife.base import FitConfig, FittingResults, ParametricModel
 from assetlife.typing import CoercibleFloat64_ND, Float64_ND
@@ -45,7 +44,7 @@ class LinearCovarEffect(ParametricModel):
         Coefficients of the covariates effect.
     """
 
-    def __init__(self, *coefficients: float):
+    def __init__(self, *coefficients: float | None):
         super().__init__(*coefficients)
 
     def g(self, *covar: CoercibleFloat64_ND) -> Float64_ND:
@@ -63,11 +62,9 @@ class LinearCovarEffect(ParametricModel):
         """
         nb_coef = self.get_params().size
         if len(covar) != nb_coef:
-            raise ValueError(
-                f"""
+            raise ValueError(f"""
                 Invalid number of covar. Got {nb_coef} coefficients but {len(covar)} covariates are given.
-                """
-            )
+                """)
         broadcasted_covar = np.broadcast_arrays(*covar)
         stack_covar = np.stack(broadcasted_covar, axis=-1)
         return np.exp(np.sum(stack_covar * self.get_params(), axis=-1))
@@ -137,6 +134,19 @@ class ParametricLifetimeRegression(
         out : ndarray
         """
         return self.covar_effect.get_params()
+
+    @override
+    def get_params_bounds(self) -> Bounds:
+        nb_coefficients = self.covar_effect.get_params().size
+        lb = np.concatenate((
+            np.full(nb_coefficients, -np.inf),
+            self.baseline.get_params_bounds().lb,
+        ))
+        ub = np.concatenate((
+            np.full(nb_coefficients, np.inf),
+            self.baseline.get_params_bounds().ub,
+        ))
+        return Bounds(lb, ub)
 
     @override
     @document_args(base_cls=ParametricLifetimeModel, args_docstring=_covar_docstring)
@@ -244,17 +254,34 @@ class ParametricLifetimeRegression(
         self,
         size: int | tuple[int, ...] | None = None,
         *covar: CoercibleFloat64_ND,
-        seed: int
-        | np.random.Generator
-        | np.random.BitGenerator
-        | np.random.RandomState
-        | None = None,
+        seed: (
+            int
+            | np.random.Generator
+            | np.random.BitGenerator
+            | np.random.RandomState
+            | None
+        ) = None,
     ) -> Float64_ND:
         return super().rvs(
             size,
             *covar,
             seed=seed,
         )
+
+    @override
+    def init_params_from_time(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        """
+        Init method based on statistical heuristics to init parameters of a regression before fit.
+        Covariates coefficients are init to 0, baseline coefficients are init based on distribution heuristics.
+        """
+        param0 = np.zeros_like(self.get_params(), dtype=np.float64)
+        param0[-self.baseline.get_params().size :] = (
+            self.baseline.init_params_from_time(time)
+        )
+        return param0
 
     @override
     def init_likelihood(
@@ -270,13 +297,11 @@ class ParametricLifetimeRegression(
             type(self.baseline)(), coefficients=(0.0,) * len(args)
         )  # init new regression object with appropriate number of covar
         lifetime_data = LifetimeData(time, event, entry, args)
-        x0 = kwargs.get(
-            "x0", init_regression_params_from_lifetimes(fresh_regression, lifetime_data)
-        )
+        x0 = kwargs.get("x0", fresh_regression.init_params_from_time(time))
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", get_regression_params_bounds(fresh_regression)
+            "bounds", fresh_regression.get_params_bounds()
         )
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         config.covariance_method = kwargs.get(
@@ -293,6 +318,50 @@ class ParametricLifetimeRegression(
         entry: onp.Array1D[np.float64] | None = None,
         **kwargs: Any,
     ) -> Self:
+        """
+        Estimate the model parameters from lifetime data.
+
+        Parameters
+        ----------
+        time : ndarray of shape (n_samples,) or (n_samples, 2)
+            Observed lifetimes.
+
+            - If 1D, each value is either a complete or a right-censored
+              lifetime. Use ``event`` to indicate which values are
+              right-censored.
+            - If 2D, each row encodes a lifetime as an interval
+              ``[lower, upper]``. A complete lifetime is encoded as ``[x, x]``,
+              a right-censored lifetime as ``[x, np.inf]``, a left-censored
+              lifetime as ``[0., x]``, and an interval-censored lifetime as
+              ``[a, b]``. In this format, ``event`` is ignored.
+        covar : ndarray of shape (n_samples, n_covariates) or sequence of 1D ndarray
+            Covariate values for each sample. If a sequence of 1D arrays is
+            given, each array holds the values of one covariate.
+        event : ndarray of shape (n_samples,) of bool, default None
+            Event indicators for 1D ``time``: ``True`` if the lifetime is
+            complete (failure observed), ``False`` if it is right-censored.
+            If None, all lifetimes are considered complete.
+        entry : ndarray of shape (n_samples,), default None
+            Left-truncation times, i.e. the age at which each sample entered
+            observation. If None, no left truncation is applied.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+            which searches for the parameters minimizing the negative
+            log-likelihood.
+
+            The additional keyword ``covariance_method`` controls how the
+            covariance matrix of the estimated parameters is computed. Allowed
+            values are ``"cs"``, ``"2point"``, ``"exact"`` or ``False``. If
+            ``False``, the covariance is not estimated. If ``"exact"``, ``hess``
+            must also be provided. If not set, the model's default method is
+            used.
+
+        Returns
+        -------
+        self : ParametricLifetimeRegression
+            The fitted model. Estimated parameters are set in place.
+        """
         if not isinstance(covar, Sequence):
             covar = (covar,)
         optimizer = self.init_likelihood(
@@ -303,31 +372,6 @@ class ParametricLifetimeRegression(
         self.set_params(self.fitting_results.optimal_params)
 
         return self
-
-
-def init_regression_params_from_lifetimes(
-    model: ParametricLifetimeRegression, data: LifetimeData
-) -> onp.Array1D[np.float64]:
-    param0 = np.zeros_like(model.get_params(), dtype=np.float64)
-    param0[-model.baseline.get_params().size :] = init_distrib_params_from_lifetimes(
-        model.baseline, data
-    )
-    return param0
-
-
-def get_regression_params_bounds(model: ParametricLifetimeRegression) -> Bounds:
-    nb_coefficients = model.covar_effect.get_params().size
-    lb = np.concatenate((
-        np.full(nb_coefficients, -np.inf),
-        get_distrib_params_bounds(
-            model.baseline
-        ).lb,  # baseline has _params_bounds according to typing
-    ))
-    ub = np.concatenate((
-        np.full(nb_coefficients, np.inf),
-        get_distrib_params_bounds(model.baseline).ub,
-    ))
-    return Bounds(lb, ub)
 
 
 @final
@@ -595,7 +639,7 @@ class ParametricAcceleratedFailureTime(ParametricLifetimeRegression):
         baseline_hf_t0 = self.baseline.hf(t0)
         return np.concatenate(
             (
-                -jac_g / g * t0 * baseline_hf_t0,  #  (nb_coef, ...)
+                -jac_g / g * t0 * baseline_hf_t0,  # (nb_coef, ...)
                 baseline_jac_chf_t0,  # (p, ...)
             ),
             axis=0,

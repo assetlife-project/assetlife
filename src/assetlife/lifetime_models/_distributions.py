@@ -10,6 +10,7 @@ from typing import (
     Self,
     final,
 )
+from optype.numpy._array import Array, Array1D
 from typing_extensions import override
 
 import numpy as np
@@ -38,6 +39,14 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
     """
 
     fitting_results: FittingResults | None
+
+    @override
+    def get_params_bounds(self) -> Bounds:
+        nb_params = self.get_params().size
+        return Bounds(
+            np.full(nb_params, np.finfo(float).resolution),
+            np.full(nb_params, np.inf),
+        )
 
     @override
     @document_args(base_cls=ParametricLifetimeModel, args_docstring=[])
@@ -121,6 +130,18 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         )
 
     @override
+    def init_params_from_time(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        # flatten in case of 2D time
+        flatten_time = time.flatten()
+        nb_params = self.get_params().size
+        param0 = np.ones(nb_params, dtype=np.float64)
+        param0[-1] = 1 / np.median(flatten_time)
+        return param0
+
+    @override
     def init_likelihood(
         self,
         time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
@@ -132,12 +153,10 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         assert args is None
         lifetime_data = LifetimeData(time, event=event, entry=entry)
         fresh_distrib = type(self)()
-        x0 = kwargs.get(
-            "x0", init_distrib_params_from_lifetimes(fresh_distrib, lifetime_data)
-        )
+        x0 = kwargs.get("x0", fresh_distrib.init_params_from_time(time))
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", get_distrib_params_bounds(fresh_distrib)
+            "bounds", fresh_distrib.get_params_bounds()
         )
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         config.covariance_method = kwargs.get(
@@ -152,42 +171,52 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         entry: onp.Array1D[np.float64] | None = None,
         **kwargs: Any,
     ) -> Self:
+        """
+        Estimate the model parameters from lifetime data.
 
+        Parameters
+        ----------
+        time : ndarray of shape (n_samples,) or (n_samples, 2)
+            Observed lifetimes.
+
+            - If 1D, each value is either a complete or a right-censored
+              lifetime. Use ``event`` to indicate which values are
+              right-censored.
+            - If 2D, each row encodes a lifetime as an interval
+              ``[lower, upper]``. A complete lifetime is encoded as ``[x, x]``,
+              a right-censored lifetime as ``[x, np.inf]``, a left-censored
+              lifetime as ``[0., x]``, and an interval-censored lifetime as
+              ``[a, b]``. In this format, ``event`` is ignored.
+        event : ndarray of shape (n_samples,) of bool, default None
+            Event indicators for 1D ``time``: ``True`` if the lifetime is
+            complete (failure observed), ``False`` if it is right-censored.
+            If None, all lifetimes are considered complete.
+        entry : ndarray of shape (n_samples,), default None
+            Left-truncation times, i.e. the age at which each sample entered
+            observation. If None, no left truncation is applied.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+            which searches for the parameters minimizing the negative
+            log-likelihood.
+
+            The additional keyword ``covariance_method`` controls how the
+            covariance matrix of the estimated parameters is computed. Allowed
+            values are ``"cs"``, ``"2point"``, ``"exact"`` or ``False``. If
+            ``False``, the covariance is not estimated. If ``"exact"``, ``hess``
+            must also be provided. If not set, the model's default method is
+            used.
+
+        Returns
+        -------
+        self : ParametricLifetimeRegression
+            The fitted model. Estimated parameters are set in place.
+        """
         optimizer = self.init_likelihood(time, event=event, entry=entry, **kwargs)
         self.fitting_results = optimizer.optimize()
         self.set_params(self.fitting_results.optimal_params)
 
         return self
-
-
-def init_distrib_params_from_lifetimes(
-    model: LifetimeDistribution, data: LifetimeData
-) -> onp.Array1D[np.float64]:
-    # flatten censored_time in case it is 2D
-    all_time_values = np.concatenate((
-        data.complete_time.flatten(),
-        data.censored_time.flatten(),
-    ))
-    nb_params = model.get_params().size
-    if isinstance(model, Gompertz):
-        param0 = np.empty(nb_params, dtype=np.float64)
-        rate = np.pi / (np.sqrt(6) * np.std(all_time_values))
-        shape = np.exp(-rate * np.mean(all_time_values))
-        param0[0] = shape
-        param0[1] = rate
-        return param0
-
-    param0 = np.ones(nb_params, dtype=np.float64)
-    param0[-1] = 1 / np.median(all_time_values)
-    return param0
-
-
-def get_distrib_params_bounds(model: LifetimeDistribution) -> Bounds:
-    nb_params = model.get_params().size
-    return Bounds(
-        np.full(nb_params, np.finfo(float).resolution),
-        np.full(nb_params, np.inf),
-    )
 
 
 @final
@@ -611,6 +640,21 @@ class Gompertz(LifetimeDistribution):
     def __repr__(self) -> str:
         params = self.get_params()
         return f"Gompertz(shape={params[0].item()!r}, rate={params[1].item()!r})"
+
+    @override
+    def init_params_from_time(
+        self,
+        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+    ) -> onp.Array1D[np.float64]:
+        # flatten in case of 2D time
+        flatten_time = time.flatten()
+        nb_params = self.get_params().size
+        param0 = np.empty(nb_params, dtype=np.float64)
+        rate = np.pi / (np.sqrt(6) * np.std(flatten_time))
+        shape = np.exp(-rate * np.mean(flatten_time))
+        param0[0] = shape
+        param0[1] = rate
+        return param0
 
 
 @final
