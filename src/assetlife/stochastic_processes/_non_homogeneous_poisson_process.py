@@ -394,6 +394,21 @@ class NonHomogeneousPoissonProcess(ParametricModel, Generic[*CovarTs]):
         self.fitting_results = fitting_results
         return self
 
+    def freeze(self, *args: *CovarTs) -> FrozenNonHomogeneousPoissonProcess[*CovarTs]:
+        """
+        Return a process with additional arguments stored.
+
+        Parameters
+        ----------
+        *args : float or np.ndarray
+            Additional arguments needed by the model.
+
+        Returns
+        -------
+        FrozenNonHomogeneousPoissonProcess
+        """
+        return FrozenNonHomogeneousPoissonProcess(self, *args)
+
 
 class FrozenNonHomogeneousPoissonProcess(
     NonHomogeneousPoissonProcess[()], Generic[*CovarTs]
