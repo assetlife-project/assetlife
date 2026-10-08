@@ -1,0 +1,6 @@
+﻿Seed
+====
+
+.. currentmodule:: assetlife.typing
+
+.. autodata:: Seed

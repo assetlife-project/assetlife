@@ -1,0 +1,6 @@
+﻿load\_circuit\_breaker
+======================
+
+.. currentmodule:: assetlife.datasets
+
+.. autofunction:: load_circuit_breaker

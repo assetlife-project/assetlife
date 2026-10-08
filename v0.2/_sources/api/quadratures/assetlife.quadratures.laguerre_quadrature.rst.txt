@@ -1,0 +1,6 @@
+﻿laguerre\_quadrature
+====================
+
+.. currentmodule:: assetlife.quadratures
+
+.. autofunction:: laguerre_quadrature
