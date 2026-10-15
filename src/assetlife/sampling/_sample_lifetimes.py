@@ -109,6 +109,53 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     covariates_labels: Sequence[str] | None = None,
     covariates_values: Sequence[Array1D[np.float64]] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Sample failures data from a NHPP, used for fit
+
+    Parameters
+    ----------
+    n_assets : int
+        Number of assets present in the sample
+    n_failures_per_asset : int
+        Number of failures to generate per asset (before censoring)
+    start_observation : float, optional
+        Start of the observation window. Defaults to 0.
+    end_observation : float, optional
+        End of the observation window. Defaults to np.inf.
+    covariates_labels : Sequence[str] | None, optional
+        Labels to use for covariates in the asset table. Defaults to None.
+    covariates_values : Sequence[Array1D[np.float64]] | None, optional
+        Values of the covariates, in broadcastable shape. Defaults to None.
+
+    Returns
+    -------
+    failures : pd.DataFrame
+        Failure table for each asset, as used in the NHPP fit
+    assets : pd.DataFrame
+        Asset table, describing the observation start and end for each asset
+        and the covariates used if any
+
+    Raises
+    ------
+    ValueError
+        If covariates shapes are missing with a regression
+
+    Examples
+    --------
+    >>> failures
+        id  time
+    0   1   3.2
+    1   1   7.8
+    2   2   5.0
+    3   3   2.1
+    4   3   4.6
+    5   3   9.3
+    >>> assets
+        id  start   end  covar_1  covar_2
+    0   1    0.0  10.0      0.5       10
+    1   2    0.0  12.0      1.2       20
+    2   3    0.0  11.5      0.8       15
+    3   4    0.0   8.0      2.0       30
+    """
 
     # Ensure covariates make sense when using a regression
     is_regression = False
