@@ -25,8 +25,8 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
@@ -34,10 +34,10 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=0ebd861e" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
     <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
@@ -48,7 +48,7 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/assetlife/lifetime_models/_semi_parametric_regressions';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://docs.assetlife.org/versions.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'latest';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -60,8 +60,9 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.2.0" />
+  <meta name="docsearch:version" content="0.3.0" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -445,8 +446,7 @@
                   
   <h1>Source code for assetlife.lifetime_models._semi_parametric_regressions</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">final</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">override</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">final</span><span class="p">,</span> <span class="n">override</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">optype.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
@@ -490,12 +490,11 @@
         <span class="n">sizes</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">entry</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">covar</span><span class="p">)]</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">sizes</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">""""</span>
-<span class="s2">                All lifetime data must have the same number of values. Fields</span>
-<span class="s2">                length are different. Got </span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span><span class="si">}</span><span class="s2">.</span>
-<span class="s2">                """</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"All lifetime data must have the same number of values. Fields "</span>
+                <span class="sa">f</span><span class="s2">"length are different. Got </span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ordered_event_time</span><span class="p">,</span>  <span class="c1"># uncensored sorted untied times</span>
             <span class="n">ordered_event_index</span><span class="p">,</span>
@@ -527,6 +526,67 @@
         <span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_psi</span><span class="p">(</span>
+    <span class="n">covar_effect</span><span class="p">:</span> <span class="n">LinearCovarEffect</span><span class="p">,</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">CoxData</span><span class="p">,</span>
+    <span class="n">on</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"risk"</span><span class="p">,</span> <span class="s2">"death"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"risk"</span><span class="p">,</span>
+    <span class="n">order</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Psi formula used for likelihood computations.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    covar_effect : LinearCovarEffect</span>
+<span class="sd">        The covariates effect, holding the parameter values to use.</span>
+<span class="sd">    data : CoxData</span>
+<span class="sd">        The data of the Cox model.</span>
+<span class="sd">    on : {"risk", "death"}, default is "risk"</span>
+<span class="sd">        The set on which the sum is applied.</span>
+<span class="sd">    order : {0, 1, 2}, default is 0</span>
+<span class="sd">        Order of the derivatives with respect to params.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    out : np.ndarray</span>
+<span class="sd">        Psi formulation, of shape (m, 1) if order is 0, (m, p) if order</span>
+<span class="sd">        is 1 and (m, p, p) if order is 2.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``on`` or ``order`` is not one of the allowed values.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">on</span> <span class="o">==</span> <span class="s2">"risk"</span><span class="p">:</span>
+        <span class="n">i_set</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">risk_set</span>
+    <span class="k">elif</span> <span class="n">on</span> <span class="o">==</span> <span class="s2">"death"</span><span class="p">:</span>
+        <span class="n">i_set</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">death_set</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"on must be 'risk' or 'death', got </span><span class="si">{</span><span class="n">on</span><span class="si">!r}</span><span class="s2">"</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># output shape: [m]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">i_set</span><span class="p">,</span> <span class="n">covar_effect</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># output shape: [m, p]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+            <span class="n">i_set</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">)</span> <span class="o">*</span> <span class="n">covar_effect</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># output shape: [m, p, p]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span>
+            <span class="n">i_set</span><span class="p">[:,</span> <span class="p">:</span><span class="kc">None</span><span class="p">],</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">covar_effect</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">))[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span>
+            <span class="n">axes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"order must be 0, 1 or 2, got </span><span class="si">{</span><span class="n">order</span><span class="si">!r}</span><span class="s2">"</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
 <span class="k">class</span><span class="w"> </span><span class="nc">CoxPartialLifetimeLikelihood</span><span class="p">(</span>
     <span class="n">MaximumLikelihoodOptimizer</span><span class="p">[</span><span class="n">LinearCovarEffect</span><span class="p">,</span> <span class="n">CoxData</span><span class="p">]</span>
 <span class="p">):</span>
@@ -539,7 +599,7 @@
         <span class="n">model</span><span class="p">:</span> <span class="n">LinearCovarEffect</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">CoxData</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">FitConfig</span><span class="p">,</span>
-    <span class="p">):</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
@@ -559,7 +619,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
         <span class="k">return</span> <span class="o">-</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ordered_event_covar</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-            <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">())</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">jac_negative_log</span><span class="p">(</span>
@@ -569,7 +629,9 @@
 
         <span class="k">return</span> <span class="o">-</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ordered_event_covar</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-            <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">())</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="o">-</span> <span class="p">(</span><span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">hess_negative_log</span><span class="p">(</span>
@@ -577,60 +639,16 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array2D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>  <span class="c1"># changes model params</span>
 
-        <span class="n">psi_order_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">()</span>
-        <span class="n">psi_order_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">psi_order_0</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">psi_order_1</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-        <span class="n">hessian_part_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">psi_order_0</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
-        <span class="c1"># print("hessian_part_1 [d, p, p]:", hessian_part_1.shape)</span>
+        <span class="n">hessian_part_1</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">psi_order_0</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
 
         <span class="n">hessian_part_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">psi_order_1</span> <span class="o">/</span> <span class="n">psi_order_0</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
             <span class="n">psi_order_1</span> <span class="o">/</span> <span class="n">psi_order_0</span>
         <span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
-        <span class="c1"># print("hessian_part_2 [d, p, p]:", hessian_part_2.shape)</span>
 
         <span class="k">return</span> <span class="n">hessian_part_1</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">hessian_part_2</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">psi</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">on</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"risk"</span><span class="p">,</span> <span class="s2">"death"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"risk"</span><span class="p">,</span>
-        <span class="n">order</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Psi formula used for likelihood computations</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            on (str, optional): "risk" or "death". Defaults to "risk". If "death",</span>
-<span class="sd">            sum is applied on death set. order (int, optional): order derivatives</span>
-<span class="sd">            with respect to params. Defaults to 0.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            np.ndarray: psi formulation</span>
-<span class="sd">            If order 0, shape [m, 1]</span>
-<span class="sd">            If order 1, shape [m, p]</span>
-<span class="sd">            If order 2, shape [m, p, p]</span>
-<span class="sd">        """</span>
-        <span class="k">if</span> <span class="n">on</span> <span class="o">==</span> <span class="s2">"risk"</span><span class="p">:</span>
-            <span class="n">i_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">risk_set</span>
-        <span class="k">elif</span> <span class="n">on</span> <span class="o">==</span> <span class="s2">"death"</span><span class="p">:</span>
-            <span class="n">i_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">death_set</span>
-
-        <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># shape [m]</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">i_set</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="c1"># shape [m, p]</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
-                <span class="n">i_set</span><span class="p">,</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">),</span>
-            <span class="p">)</span>
-        <span class="k">elif</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="c1"># shape [m, p, p]</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span>
-                <span class="n">i_set</span><span class="p">[:,</span> <span class="p">:</span><span class="kc">None</span><span class="p">],</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
-                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
-                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">))[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span>
-                <span class="n">axes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-            <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
 
 <span class="nd">@final</span>
@@ -642,7 +660,7 @@
         <span class="n">model</span><span class="p">:</span> <span class="n">LinearCovarEffect</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">CoxData</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">FitConfig</span><span class="p">,</span>
-    <span class="p">):</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">s_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">death_set</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">))</span>
@@ -653,7 +671,9 @@
 
         <span class="k">return</span> <span class="o">-</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s_j</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-            <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">()))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="o">-</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="p">)</span>
 
     <span class="nd">@override</span>
@@ -664,9 +684,10 @@
 
         <span class="k">return</span> <span class="o">-</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">s_j</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-            <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">()))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
-                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
-            <span class="p">)</span>
+            <span class="o">-</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+                <span class="o">*</span> <span class="p">(</span><span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="p">)</span>
 
     <span class="nd">@override</span>
@@ -675,16 +696,14 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array2D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>  <span class="c1"># changes model params</span>
 
-        <span class="n">psi_order_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">()</span>
-        <span class="n">psi_order_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">psi_order_0</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">psi_order_1</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-        <span class="n">hessian_part_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">psi_order_0</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
-        <span class="c1"># print("hessian_part_1 [d, p, p]:", hessian_part_1.shape)</span>
+        <span class="n">hessian_part_1</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">psi_order_0</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
 
         <span class="n">hessian_part_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">psi_order_1</span> <span class="o">/</span> <span class="n">psi_order_0</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
             <span class="n">psi_order_1</span> <span class="o">/</span> <span class="n">psi_order_0</span>
         <span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
-        <span class="c1"># print("hessian_part_2 [d, p, p]:", hessian_part_2.shape)</span>
 
         <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">hessian_part_1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">hessian_part_2</span>
@@ -703,7 +722,7 @@
         <span class="n">model</span><span class="p">:</span> <span class="n">LinearCovarEffect</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">CoxData</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">FitConfig</span><span class="p">,</span>
-    <span class="p">):</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">s_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">death_set</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">covar</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates</span> <span class="o">=</span> <span class="p">(</span>
@@ -718,41 +737,53 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">order</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Psi formula for Efron method</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Psi formula for Efron method.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            order (int, optional): order derivatives with respect to params. Defaults to 0.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        order : {0, 1, 2}, default is 0</span>
+<span class="sd">            Order of the derivatives with respect to params.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            np.ndarray: psi formulation for Efron method</span>
-<span class="sd">            If order 0, shape [m, max(d_j)]</span>
-<span class="sd">            If order 1, shape [m, max(d_j), p]</span>
-<span class="sd">            If order 2, shape [m, max(d_j), p, p]</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        out : np.ndarray</span>
+<span class="sd">            Psi formulation for Efron method, of shape (m, max(d_j)) if order</span>
+<span class="sd">            is 0, (m, max(d_j), p) if order is 1 and (m, max(d_j), p, p) if</span>
+<span class="sd">            order is 2.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If ``order`` is not 0, 1 or 2.</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># shape [m, max(d_j)]</span>
+            <span class="c1"># output shape: [m, max(d_j)]</span>
             <span class="k">return</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span>
-                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">on</span><span class="o">=</span><span class="s2">"death"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
+                <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span>
+                <span class="o">-</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"death"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
                 <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates</span>
                 <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span>
             <span class="p">)</span>
-        <span class="k">elif</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="c1"># shape [m, max(d_j), p]</span>
+        <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># output shape: [m, max(d_j), p]</span>
             <span class="k">return</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
-                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">on</span><span class="o">=</span><span class="s2">"death"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+                <span class="o">-</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"death"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
                 <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discount_rates</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
             <span class="p">)</span>
-        <span class="k">elif</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="c1"># shape [m, max(d_j), p, p]</span>
+        <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># output shape: [m, max(d_j), p, p]</span>
             <span class="k">return</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
                 <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
-                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">on</span><span class="o">=</span><span class="s2">"death"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="o">-</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"death"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
                 <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discount_rates</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">discount_rates_mask</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
             <span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"order must be 0, 1 or 2, got </span><span class="si">{</span><span class="n">order</span><span class="si">!r}</span><span class="s2">"</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">negative_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array1D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -762,14 +793,13 @@
         <span class="c1"># .sum() --&gt; sum on j</span>
         <span class="c1"># using where in np.log allows to avoid 0. masked elements</span>
         <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_psi_efron</span><span class="p">()</span>
-        <span class="n">neg_L</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span>
+        <span class="k">return</span> <span class="o">-</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s_j</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
             <span class="o">-</span> <span class="n">np</span>
             <span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">where</span><span class="o">=</span><span class="p">(</span><span class="n">m</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">))</span>
             <span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">neg_L</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">jac_negative_log</span><span class="p">(</span>
@@ -849,7 +879,7 @@
         <span class="n">event</span><span class="p">:</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array1D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">entry</span><span class="p">:</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array1D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="p">):</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">nb_covar</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covar</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">covar</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_covar_effect</span> <span class="o">=</span> <span class="n">LinearCovarEffect</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">nb_covar</span><span class="p">)</span>
         <span class="n">covar</span> <span class="o">=</span> <span class="p">(</span><span class="n">covar</span><span class="p">,)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">covar</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="k">else</span> <span class="n">covar</span>
@@ -886,50 +916,28 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_chf0</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        The cumulative hazard function estimation</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        se : bool, default is False</span>
-<span class="sd">            If true, the estimated standard errors are returned too.</span>
+<span class="sd">        The baseline cumulative hazard function estimation.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        tuple of 2 or 3 ndarrays</span>
-<span class="sd">            A tuple containing the timeline,</span>
-<span class="sd">            the estimated values and optionally the estimated standard errors (if se is set to true)</span>
+<span class="sd">        out : np.ndarray</span>
+<span class="sd">            The estimated values at each ordered event time.</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">psi</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="o">/</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_covar_effect</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
         <span class="p">)</span>
-        <span class="c1"># if se:</span>
-        <span class="c1">#     var = np.cumsum(</span>
-        <span class="c1">#         self._likelihood.data.event_count[:, None] / self._likelihood.psi() ** 2</span>
-        <span class="c1">#     )</span>
-        <span class="c1">#     conf_int_values = np.hstack(</span>
-        <span class="c1">#         [</span>
-        <span class="c1">#             values[:, None]</span>
-        <span class="c1">#             + np.sqrt(var)[:, None] * norm.ppf(0.05 / 2, loc=0, scale=1),</span>
-        <span class="c1">#             values[:, None]</span>
-        <span class="c1">#             - np.sqrt(var)[:, None] * norm.ppf(0.05 / 2, loc=0, scale=1),</span>
-        <span class="c1">#         ]</span>
-        <span class="c1">#     )</span>
-        <span class="c1">#     return values, conf_int_values</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_sf0</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        The survival function estimation</span>
+<span class="sd">        The baseline survival function estimation.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        tuple of 2 or 3 ndarrays</span>
-<span class="sd">            A tuple containing the timeline,</span>
-<span class="sd">            the estimated values and optionally the estimated standard errors (if se is set to true)</span>
+<span class="sd">        out : np.ndarray</span>
+<span class="sd">            The estimated values at each ordered event time.</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_chf0</span><span class="p">())</span>
-        <span class="c1"># if se:</span>
-        <span class="c1">#     chf, chf_conf_int_values = self.chf0(se=True)</span>
-        <span class="c1">#     return np.exp(-chf), np.exp(-chf_conf_int_values)</span>
 
 <div class="viewcode-block" id="SemiParametricProportionalHazard.sf">
 <a class="viewcode-back" href="../../../api/semiparametric_lifetime_models/assetlife.lifetime_models.SemiParametricProportionalHazard.html#assetlife.lifetime_models.SemiParametricProportionalHazard.sf">[docs]</a>
@@ -979,8 +987,8 @@
 <span class="sd">        Klein and Moeschberger: Survival Analysis Techniques for Censored and</span>
 <span class="sd">        Truncated Data (p. 284).</span>
 <span class="sd">        """</span>
-        <span class="n">psi_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">psi</span><span class="p">()</span>
-        <span class="n">psi_order_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">psi_values</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_covar_effect</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">psi_order_1</span> <span class="o">=</span> <span class="n">_psi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_covar_effect</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">d_j_on_psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">event_count</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">/</span> <span class="n">psi_values</span>
 
         <span class="n">q3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span>
@@ -1026,8 +1034,8 @@
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1047,7 +1055,7 @@
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
   </p>
 </div>
       
@@ -1060,7 +1068,7 @@
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

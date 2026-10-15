@@ -37,8 +37,6 @@
     }
    ],
    "source": [
-    "import pandas as pd\n",
-    "\n",
     "lifetime_dataset = load_circuit_breaker()\n",
     "display(lifetime_dataset)"
    ]

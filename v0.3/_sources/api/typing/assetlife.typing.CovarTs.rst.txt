@@ -1,0 +1,6 @@
+﻿CovarTs
+=======
+
+.. currentmodule:: assetlife.typing
+
+.. autodata:: CovarTs
