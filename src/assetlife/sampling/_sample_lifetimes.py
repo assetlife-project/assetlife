@@ -109,22 +109,42 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     covariates_labels: Sequence[str] | None = None,
     covariates_values: Sequence[Array1D[np.float64]] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+
+    # Ensure covariates make sense when using a regression
+    is_regression = False
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
+        if covariates_labels is None or covariates_values is None:
+            error_msg = (
+                "When using a Regression as lifetime model, please specify covariates."
+            )
+            raise ValueError(error_msg)
+        if len(covariates_values) != len(covariates_labels):
+            error_msg = "Make sure covariates labels and values have same lengths."
+            raise ValueError(error_msg)
+        is_regression = True
+
+    # Sample the basis, with default Exponential
     exp = Exponential(rate=1)
     sample = exp.rvs(size=(n_assets, n_failures_per_asset))
     sample = np.cumsum(sample, axis=1)
 
-    if covariates_values is not None:
+    # Apply NHPP property, depending on ichf use of covariates or not
+    if is_regression:
+        assert covariates_values is not None
         sample = lifetime_model.ichf(sample, *covariates_values)
     else:
         sample = lifetime_model.ichf(sample)
 
+    # Create indexes for assets
     indexes = np.arange(0, n_assets)[:, np.newaxis] * np.ones_like(sample)
 
+    # Create Failure table and truncate on the observation window
     failures = pd.DataFrame(data={"time": sample.flatten(), "id": indexes.flatten()})
     failures = failures[
         (failures["time"] > start_observation) & (failures["time"] < end_observation)
     ]
 
+    # Create Asset table and specify the observation for each asset
     samples_last = sample.max(axis=1)
     failures_end_observation = np.minimum(samples_last, end_observation)
     assets = pd.DataFrame(
@@ -134,8 +154,10 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
             "end": failures_end_observation,
         }
     )
-
-    if (covariates_labels is not None) and (covariates_values is not None):
+    # Add the covariates if used
+    if is_regression:
+        assert covariates_labels is not None
+        assert covariates_values is not None
         for label, value in zip(covariates_labels, covariates_values, strict=True):
             assets[label] = value
 
