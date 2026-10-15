@@ -4,9 +4,12 @@ from collections.abc import Sequence
 from typing import NamedTuple, overload
 
 import numpy as np
+import pandas as pd
 from optype.numpy import Array1D
 
 from assetlife.lifetime_models import LifetimeDistribution, ParametricLifetimeRegression
+from assetlife.lifetime_models._base import ParametricLifetimeModel
+from assetlife.lifetime_models._distributions import Exponential
 from assetlife.sampling._iterables import RenewalProcessIterable
 from assetlife.stochastic_processes import RenewalProcess
 from assetlife.typing import CoercibleFloat64_1D, Seed
@@ -95,3 +98,45 @@ def sample_lifetimes_from_renewal_process(  # ruff: ignore[too-many-arguments, t
         event=struct_array["event"],
         entry=struct_array["entry"],
     )
+
+
+def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
+    lifetime_model: ParametricLifetimeModel,
+    n_assets: int,
+    n_failures_per_asset: int,
+    start_observation: float = 0,
+    end_observation: float = np.inf,
+    covariates_labels: Sequence[str] | None = None,
+    covariates_values: Sequence[Array1D[np.float64]] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    exp = Exponential(rate=1)
+    sample = exp.rvs(size=(n_assets, n_failures_per_asset))
+    sample = np.cumsum(sample, axis=1)
+
+    if covariates_values is not None:
+        sample = lifetime_model.ichf(sample, *covariates_values)
+    else:
+        sample = lifetime_model.ichf(sample)
+
+    indexes = np.arange(0, n_assets)[:, np.newaxis] * np.ones_like(sample)
+
+    failures = pd.DataFrame(data={"time": sample.flatten(), "id": indexes.flatten()})
+    failures = failures[
+        (failures["time"] > start_observation) & (failures["time"] < end_observation)
+    ]
+
+    samples_last = sample.max(axis=1)
+    failures_end_observation = np.minimum(samples_last, end_observation)
+    assets = pd.DataFrame(
+        data={
+            "id": np.arange(n_assets),
+            "start": start_observation,
+            "end": failures_end_observation,
+        }
+    )
+
+    if (covariates_labels is not None) and (covariates_values is not None):
+        for label, value in zip(covariates_labels, covariates_values, strict=True):
+            assets[label] = value
+
+    return failures, assets
