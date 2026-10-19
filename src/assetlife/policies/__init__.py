@@ -1,8 +1,8 @@
 """Maintenance policy models."""
 
 from ._preventive_age_replacement_policies import (
-    AgeReplacementPolicy,
-    NonHomogeneousPoissonAgeReplacementPolicy,
+    ABAOAgeReplacementPolicy,
+    AGANAgeReplacementPolicy,
     OneCycleAgeReplacementPolicy,
 )
 from ._run_to_failure_policies import (
@@ -11,8 +11,8 @@ from ._run_to_failure_policies import (
 )
 
 __all__ = [
-    "AgeReplacementPolicy",
-    "NonHomogeneousPoissonAgeReplacementPolicy",
+    "ABAOAgeReplacementPolicy",
+    "AGANAgeReplacementPolicy",
     "OneCycleAgeReplacementPolicy",
     "OneCycleRunToFailurePolicy",
     "RunToFailurePolicy",

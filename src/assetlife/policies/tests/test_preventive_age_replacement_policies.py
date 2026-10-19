@@ -3,20 +3,20 @@ import pytest
 from optype.numpy import Array1D
 
 from assetlife.lifetime_models import ParametricLifetimeModel
-from assetlife.policies import AgeReplacementPolicy, OneCycleAgeReplacementPolicy
+from assetlife.policies import AGANAgeReplacementPolicy, OneCycleAgeReplacementPolicy
 
 
 # @pytest.fixture(params=[OneCycleAgeReplacementPolicy, AgeReplacementPolicy])
-@pytest.fixture(params=[AgeReplacementPolicy])
+@pytest.fixture(params=[AGANAgeReplacementPolicy])
 def policy(
     request: pytest.FixtureRequest, lifetime_model: ParametricLifetimeModel[()]
-) -> OneCycleAgeReplacementPolicy | AgeReplacementPolicy:
+) -> OneCycleAgeReplacementPolicy | AGANAgeReplacementPolicy:
     return request.param(lifetime_model)
 
 
 # @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_expected_equivalent_annual_cost(
-    policy: OneCycleAgeReplacementPolicy | AgeReplacementPolicy,
+    policy: OneCycleAgeReplacementPolicy | AGANAgeReplacementPolicy,
     cf: Array1D[np.float64],
     cp: Array1D[np.float64],
     discounting_rate: float,
@@ -42,7 +42,7 @@ def test_expected_equivalent_annual_cost(
 
 
 def test_optimal_replacement_age(
-    policy: OneCycleAgeReplacementPolicy | AgeReplacementPolicy,
+    policy: OneCycleAgeReplacementPolicy | AGANAgeReplacementPolicy,
     cf: Array1D[np.float64],
     cp: Array1D[np.float64],
     discounting_rate: float,

@@ -192,11 +192,11 @@ class OneCycleAgeReplacementPolicy(
         return newton(eq, x0)
 
 
-class AgeReplacementPolicy(BaseAgeReplacementPolicy[ParametricLifetimeModel[()]]):
-    r"""Age replacement renewal policy.
+class AGANAgeReplacementPolicy(BaseAgeReplacementPolicy[ParametricLifetimeModel[()]]):
+    r"""Age replacement policy for As Good As New processes.
 
     Asset is replaced at age :math:`a_r` with cost :math:`c_p`, or upon failure
-    with cost :math:`c_f`.
+    with cost :math:`c_f`. Replacements are made with an identical asset with age 0.
 
     Parameters
     ----------
@@ -401,10 +401,14 @@ def get_cr_cp(
         raise TypeError("Missing cr and cp values") from err
 
 
-class NonHomogeneousPoissonAgeReplacementPolicy(
+class ABAOAgeReplacementPolicy(
     BaseAgeReplacementPolicy[NonHomogeneousPoissonProcess[()]]
 ):
-    r"""Age replacement policy for non-homogeneous Poisson processes.
+    r"""Age replacement policy for As Bad As Old processes.
+
+    Asset has multiple failures at individual cost :math:`c_f`,
+    and is replaced at age :math:`a_r` with cost :math:`c_p`.
+    Replacements are made with an identical asset with age 0.
 
     Parameters
     ----------
