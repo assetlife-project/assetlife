@@ -1,6 +1,6 @@
 """Sampling utilities for lifetimes and stochastic processes."""
 
-from ._sample_lifetimes import (
+from ._sample_fit_data import (
     sample_failures_from_nhpp,
     sample_lifetimes_from_renewal_process,
 )
