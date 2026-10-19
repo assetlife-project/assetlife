@@ -489,6 +489,8 @@ class ABAOAgeReplacementPolicy(
         msg = "implementation will come in a future release"
         raise NotImplementedError(msg)
 
+    @not_implemented_param("discouting_rate", zero_ok=True)
+    @not_implemented_param("a0")
     @override
     def expected_equivalent_annual_cost(
         self,
@@ -500,8 +502,10 @@ class ABAOAgeReplacementPolicy(
         discounting_rate: float = 0.0,
         **costs: CoercibleFloat64_1D,
     ) -> tuple[Timeline, onp.Array1D[np.float64] | onp.Array2D[np.float64]]:
-        msg = "implementation will come in a future release"
-        raise NotImplementedError(msg)
+        timeline, total_cost = self.expected_net_present_value(
+            tf, nb_steps, ar=ar, a0=a0, discounting_rate=discounting_rate
+        )
+        return timeline, total_cost / timeline
 
     @override
     def asymptotic_expected_equivalent_annual_cost(
