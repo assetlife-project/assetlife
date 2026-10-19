@@ -507,6 +507,7 @@ class ABAOAgeReplacementPolicy(
         )
         return timeline, total_cost / timeline
 
+    @not_implemented_param("a0")
     @override
     def asymptotic_expected_equivalent_annual_cost(
         self,
@@ -517,9 +518,6 @@ class ABAOAgeReplacementPolicy(
         **costs: CoercibleFloat64_1D,
     ) -> Float64_1D:
         cr, cp = get_cr_cp(**costs)
-        if a0 is not None:
-            msg = "NHPP policies with initial ages will be covered in a future release"
-            raise ValueError(msg)
 
         if discounting_rate == 0:
             asymptotic_eeac = (
