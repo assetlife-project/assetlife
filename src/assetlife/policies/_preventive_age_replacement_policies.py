@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import functools
+import inspect
 import textwrap
 import warnings
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, override
@@ -401,6 +403,37 @@ def get_cr_cp(
         raise TypeError("Missing cr and cp values") from err
 
 
+# ruff: disable[missing-type-function-argument, missing-type-args, missing-type-kwargs, missing-return-type-private-function]
+def not_implemented_param(
+    name: str,
+    zero_ok: bool = False,
+):
+    """Raise a NotImplementedError when a given param is set by user"""
+
+    def decorator(func):
+        sig = inspect.signature(func)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            value = bound.arguments[name]
+            if value is not None and not (zero_ok and not np.any(value)):
+                msg = (
+                    f"{func.__name__} with {name}: "
+                    "implementation will come in a future release."
+                )
+                raise NotImplementedError(msg)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+# ruff: enable[missing-type-function-argument, missing-type-args, missing-type-kwargs, missing-return-type-private-function]
+
+
 class ABAOAgeReplacementPolicy(
     BaseAgeReplacementPolicy[NonHomogeneousPoissonProcess[()]]
 ):
@@ -416,6 +449,8 @@ class ABAOAgeReplacementPolicy(
         Underlying non-homogeneous Poisson process.
     """
 
+    @not_implemented_param("discouting_rate", zero_ok=True)
+    @not_implemented_param("a0")
     @override
     def expected_net_present_value(
         self,
@@ -427,8 +462,20 @@ class ABAOAgeReplacementPolicy(
         discounting_rate: float = 0.0,
         **costs: CoercibleFloat64_1D,
     ) -> tuple[Timeline, onp.Array1D[np.float64] | onp.Array2D[np.float64]]:
-        msg = "implementation will come in a future release"
-        raise NotImplementedError(msg)
+
+        cr, cp = get_cr_cp(**costs)
+
+        timeline = np.linspace(0, tf, nb_steps, dtype=np.float64)
+
+        cumul_failures_at_ar = self.baseline.cumulative_intensity(ar)
+
+        n_cycles, residual_age = np.divmod(timeline, ar)
+
+        total_costs = (
+            cp + cr * cumul_failures_at_ar
+        ) * n_cycles + cr * self.baseline.cumulative_intensity(residual_age)
+
+        return timeline, total_costs
 
     @override
     def asymptotic_expected_net_present_value(
