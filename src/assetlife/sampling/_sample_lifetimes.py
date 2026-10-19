@@ -8,7 +8,6 @@ import pandas as pd
 from optype.numpy import Array1D
 
 from assetlife.lifetime_models import LifetimeDistribution, ParametricLifetimeRegression
-from assetlife.lifetime_models._base import ParametricLifetimeModel
 from assetlife.lifetime_models._distributions import Exponential
 from assetlife.sampling._iterables import RenewalProcessIterable
 from assetlife.stochastic_processes import RenewalProcess
@@ -101,7 +100,7 @@ def sample_lifetimes_from_renewal_process(  # ruff: ignore[too-many-arguments, t
 
 
 def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
-    lifetime_model: ParametricLifetimeModel,
+    lifetime_model: LifetimeDistribution | ParametricLifetimeRegression,
     n_assets: int,
     n_failures_per_asset: int,
     start_observation: float = 0,
@@ -113,6 +112,8 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
 
     Parameters
     ----------
+    lifetime_model : Lifetimedistribution | ParametricLifetimeRegression
+        Lifetime Model used for intensity function of the NHPP
     n_assets : int
         Number of assets present in the sample
     n_failures_per_asset : int
@@ -158,7 +159,6 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     """
 
     # Ensure covariates make sense when using a regression
-    is_regression = False
     if isinstance(lifetime_model, ParametricLifetimeRegression):
         if covariates_labels is None or covariates_values is None:
             error_msg = (
@@ -168,7 +168,6 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
         if len(covariates_values) != len(covariates_labels):
             error_msg = "Make sure covariates labels and values have same lengths."
             raise ValueError(error_msg)
-        is_regression = True
 
     # Sample the basis, with default Exponential
     exp = Exponential(rate=1)
@@ -176,7 +175,7 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     sample = np.cumsum(sample, axis=1)
 
     # Apply NHPP property, depending on ichf use of covariates or not
-    if is_regression:
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
         assert covariates_values is not None
         sample = lifetime_model.ichf(sample, *covariates_values)
     else:
@@ -202,7 +201,7 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
         }
     )
     # Add the covariates if used
-    if is_regression:
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
         assert covariates_labels is not None
         assert covariates_values is not None
         for label, value in zip(covariates_labels, covariates_values, strict=True):
