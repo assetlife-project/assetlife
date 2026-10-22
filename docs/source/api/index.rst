@@ -50,7 +50,6 @@ Parametric lifetime models
     ParametricProportionalHazard
     ParametricAcceleratedFailureTime
 
-
 Semiparametric lifetime regression
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -61,7 +60,6 @@ Semiparametric lifetime regression
     :nosignatures:
 
     SemiParametricProportionalHazard
-
 
 Non parametric lifetime models
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -75,7 +73,6 @@ Non parametric lifetime models
     KaplanMeier
     NelsonAalen
     ECDF
-
 
 Stochastic processes
 --------------------
@@ -124,6 +121,22 @@ Built-in datasets
     ~load_insulator_string
     ~load_power_transformer
 
+Sampling
+--------
+
+AssetLife offers few functions to sample data.
+
+.. currentmodule:: assetlife.sampling
+
+.. autosummary::
+    :toctree: sampling
+    :template: function_template.rst
+    :caption: Sampling
+    :nosignatures:
+
+    ~sample_failures_from_nhpp
+    ~sample_lifetimes_from_renewal_process
+    ~sample_process
 
 Quadratures
 -----------
@@ -143,7 +156,6 @@ support automatic broadcasting of 2D bounds.
     ~laguerre_quadrature
     ~unweighted_laguerre_quadrature
 
-
 Typing
 ------
 
@@ -162,5 +174,4 @@ Typing
     ~Float64_1D
     ~Timeline
     ~Seed
-
 
