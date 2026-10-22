@@ -265,13 +265,14 @@ changes `uv.lock`, the hooks also run `uv sync` to keep `.venv` up to date.
 uv tool install tox --upgrade
 ```
 
-| Command             | Description                                                     |
-| ------------------- | --------------------------------------------------------------- |
-| `uvx tox p -m test` | Run the unit tests in parallel on all supported Python versions |
-| `uvx tox -e 3.12`   | Run the unit tests on a single Python version                   |
-| `uvx tox -m lint`   | Run the lint and format checks (`ruff` and `dprint`)            |
-| `uvx tox -m type`   | Run the static type checks (`basedpyright`)                     |
-| `uvx tox -e docs`   | Build the documentation (`sphinx`)                              |
+| Command                    | Description                                                     |
+| -------------------------- | --------------------------------------------------------------- |
+| `uvx tox p -m test`        | Run the unit tests in parallel on all supported Python versions |
+| `uvx tox -e 3.12`          | Run the unit tests on a single Python version                   |
+| `uvx tox -m lint`          | Run the lint and format checks (`ruff` and `dprint`)            |
+| `uvx tox -m type`          | Run the static type checks (`basedpyright`)                     |
+| `uvx tox -m docs`          | Build the current documentation (`sphinx`)                      |
+| `uvx tox -m docs-versions` | Build the documentation for all versions (`sphinx`)             |
 
 If a check fails, most problems can be fixed automatically:
 
