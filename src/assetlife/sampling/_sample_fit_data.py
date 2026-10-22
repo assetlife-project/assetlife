@@ -1,0 +1,228 @@
+"""Lifetime random variate sampling utilities."""
+
+from collections.abc import Sequence
+from typing import NamedTuple, overload
+
+import numpy as np
+import pandas as pd
+from optype.numpy import Array1D
+
+from assetlife.lifetime_models import LifetimeDistribution, ParametricLifetimeRegression
+from assetlife.lifetime_models._distributions import Exponential
+from assetlife.sampling._iterables import RenewalProcessIterable
+from assetlife.stochastic_processes import RenewalProcess
+from assetlife.typing import CoercibleFloat64_1D, Seed
+
+
+class LifetimeFitArgs(NamedTuple):
+    """Lifetime data sampled for model fitting."""
+
+    time: Array1D[np.float64]
+    event: Array1D[np.bool_] | None = None
+    entry: Array1D[np.float64] | None = None
+
+
+@overload
+def sample_lifetimes_from_renewal_process(
+    lifetime_model: LifetimeDistribution,
+    nb_samples: int,
+    time_window: tuple[float, float],
+    covar: None,
+    a0: CoercibleFloat64_1D | None = None,
+    ar: CoercibleFloat64_1D | None = None,
+    seed: Seed = None,
+) -> LifetimeFitArgs: ...
+@overload
+def sample_lifetimes_from_renewal_process(
+    lifetime_model: ParametricLifetimeRegression,
+    nb_samples: int,
+    time_window: tuple[float, float],
+    covar: Sequence[float],
+    a0: CoercibleFloat64_1D | None = None,
+    ar: CoercibleFloat64_1D | None = None,
+    seed: Seed = None,
+) -> LifetimeFitArgs: ...
+def sample_lifetimes_from_renewal_process(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
+    lifetime_model: LifetimeDistribution | ParametricLifetimeRegression,
+    nb_samples: int,
+    time_window: tuple[float, float],
+    covar: Sequence[float] | None = None,
+    a0: CoercibleFloat64_1D | None = None,
+    ar: CoercibleFloat64_1D | None = None,
+    seed: Seed = None,
+) -> LifetimeFitArgs:
+    """Sample lifetimes from a renewal process.
+
+    Parameters
+    ----------
+    lifetime_model : LifetimeDistribution or ParametricLifetimeRegression
+        Lifetime model to use. If a regression is used, ``covar`` must be set.
+    nb_samples : int
+        Number of samples.
+    time_window : tuple of float
+        Observation time window.
+    covar : sequence of float, optional
+        Covariate values used when ``lifetime_model`` is a regression.
+    a0 : float or 1d array of floats, optional
+        Initial ages.
+    ar : float or 1d array of floats, optional
+        Preventive ages of replacement.
+    seed : int, BitGenerator, Generator or RandomState, optional
+        Random seed or random number generator, see ``np.random``.
+
+    Returns
+    -------
+    out : LifetimeFitArgs
+        Sampled ``time``, ``event`` and ``entry`` arrays.
+
+    Notes
+    -----
+    It is currently not possible to pass different covariate values for each
+    sampled observation. To do so, call this function with different covariate
+    values and reconstruct the covariate array manually.
+    """
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
+        assert covar is not None
+        renewal_process = RenewalProcess(lifetime_model.freeze(*covar))
+    else:
+        renewal_process = RenewalProcess(lifetime_model)
+
+    iterable = RenewalProcessIterable(
+        renewal_process, nb_samples, time_window, a0=a0, ar=ar, seed=seed
+    )
+    struct_array = np.concatenate(tuple(iterable))
+
+    return LifetimeFitArgs(
+        time=struct_array["time"],
+        event=struct_array["event"],
+        entry=struct_array["entry"],
+    )
+
+
+@overload
+def sample_failures_from_nhpp(
+    lifetime_model: LifetimeDistribution,
+    n_assets: int,
+    n_failures_per_asset: int,
+    time_window: tuple[float, float],
+    covariates_labels: None,
+    covariates_values: None,
+) -> tuple[pd.DataFrame, pd.DataFrame]: ...
+@overload
+def sample_failures_from_nhpp(
+    lifetime_model: ParametricLifetimeRegression,
+    n_assets: int,
+    n_failures_per_asset: int,
+    time_window: tuple[float, float],
+    covariates_labels: Sequence[str],
+    covariates_values: Sequence[Array1D[np.float64]],
+) -> tuple[pd.DataFrame, pd.DataFrame]: ...
+def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
+    lifetime_model: LifetimeDistribution | ParametricLifetimeRegression,
+    n_assets: int,
+    n_failures_per_asset: int,
+    time_window: tuple[float, float],
+    covariates_labels: Sequence[str] | None = None,
+    covariates_values: Sequence[Array1D[np.float64]] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Sample failures data from a NHPP, used for fit
+
+    Parameters
+    ----------
+    lifetime_model : parametric lifetime distribution or regression
+        Lifetime Model used for intensity function of the NHPP
+    n_assets : int
+        Number of assets present in the sample
+    n_failures_per_asset : int
+        Number of failures to generate per asset (before censoring)
+    time_window : tuple of float
+        Observation time window.
+    covariates_labels : sequence of str, optional
+        Labels to use for covariates in the asset table. Only usefull if
+        ``lifetime_model`` is a parametric regression. Defaults to None.
+    covariates_values : sequence of 1d-array of float, optional
+        Values of the covariates, in broadcastable shape. Only usefull if
+        ``lifetime_model`` is a parametric regression. Defaults to None.
+
+    Returns
+    -------
+    failures : pd.DataFrame
+        Failure table for each asset, as used in the NHPP fit
+    assets : pd.DataFrame
+        Asset table, describing the observation start and end for each asset
+        and the covariates used if any
+
+    Raises
+    ------
+    ValueError
+        If covariates are missing with a regression
+
+    Examples
+    --------
+    >>> failures
+        id  time
+    0   1   3.2
+    1   1   7.8
+    2   2   5.0
+    3   3   2.1
+    4   3   4.6
+    5   3   9.3
+    >>> assets
+        id  start   end  covar_1  covar_2
+    0   1    0.0  10.0      0.5       10
+    1   2    0.0  12.0      1.2       20
+    2   3    0.0  11.5      0.8       15
+    3   4    0.0   8.0      2.0       30
+    """
+
+    start_observation, end_observation = time_window[0], time_window[1]
+    # Ensure covariates make sense when using a regression
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
+        if covariates_labels is None or covariates_values is None:
+            error_msg = (
+                "When using a Regression as lifetime model, please specify covariates."
+            )
+            raise ValueError(error_msg)
+        if len(covariates_values) != len(covariates_labels):
+            error_msg = "Make sure covariates labels and values have same lengths."
+            raise ValueError(error_msg)
+
+    # Sample the basis, with default Exponential
+    exp = Exponential(rate=1)
+    sample = exp.rvs(size=(n_assets, n_failures_per_asset))
+    sample = np.cumsum(sample, axis=1)
+
+    # Apply NHPP property, depending on ichf use of covariates or not
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
+        assert covariates_values is not None
+        sample = lifetime_model.ichf(sample, *covariates_values)
+    else:
+        sample = lifetime_model.ichf(sample)
+
+    # Create indexes for assets
+    indexes = np.arange(0, n_assets)[:, np.newaxis] * np.ones_like(sample)
+
+    # Create Failure table and truncate on the observation window
+    failures = pd.DataFrame(data={"time": sample.flatten(), "id": indexes.flatten()})
+    failures = failures[
+        (failures["time"] > start_observation) & (failures["time"] < end_observation)
+    ]
+
+    # Create Asset table and specify the observation for each asset
+    samples_last = sample.max(axis=1)
+    failures_end_observation = np.minimum(samples_last, end_observation)
+    assets = pd.DataFrame(
+        data={
+            "id": np.arange(n_assets),
+            "start": start_observation,
+            "end": failures_end_observation,
+        }
+    )
+    # Add the covariates if used
+    if isinstance(lifetime_model, ParametricLifetimeRegression):
+        assert covariates_labels is not None
+        assert covariates_values is not None
+        for label, value in zip(covariates_labels, covariates_values, strict=True):
+            assets[label] = value
+
+    return failures, assets

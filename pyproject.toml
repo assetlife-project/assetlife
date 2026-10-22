@@ -281,13 +281,15 @@ commands = [
     "./docs/build",
     "--quiet",
     "--fail-on-warning",
+    "--write-all",
+    "--fresh-env",
   ],
   ["python", "-c", "print(f'Documentation can be accessed at : docs/build/html')"],
 ]
 
 [tool.tox.env.docs-versions]
 description = "sphinx build of latest plus every released version"
-labels = ["docs"]
+labels = ["docs-versions"]
 runner = "uv-venv-runner"
 skip_install = true
 allowlist_externals = ["bash"]
