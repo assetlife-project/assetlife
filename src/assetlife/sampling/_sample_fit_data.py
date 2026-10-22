@@ -99,12 +99,29 @@ def sample_lifetimes_from_renewal_process(  # ruff: ignore[too-many-arguments, t
     )
 
 
+@overload
+def sample_failures_from_nhpp(
+    lifetime_model: LifetimeDistribution,
+    n_assets: int,
+    n_failures_per_asset: int,
+    time_window: tuple[float, float],
+    covariates_labels: None,
+    covariates_values: None,
+) -> tuple[pd.DataFrame, pd.DataFrame]: ...
+@overload
+def sample_failures_from_nhpp(
+    lifetime_model: ParametricLifetimeRegression,
+    n_assets: int,
+    n_failures_per_asset: int,
+    time_window: tuple[float, float],
+    covariates_labels: Sequence[str],
+    covariates_values: Sequence[Array1D[np.float64]],
+) -> tuple[pd.DataFrame, pd.DataFrame]: ...
 def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
     lifetime_model: LifetimeDistribution | ParametricLifetimeRegression,
     n_assets: int,
     n_failures_per_asset: int,
-    start_observation: float = 0,
-    end_observation: float = np.inf,
+    time_window: tuple[float, float],
     covariates_labels: Sequence[str] | None = None,
     covariates_values: Sequence[Array1D[np.float64]] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -112,20 +129,20 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
 
     Parameters
     ----------
-    lifetime_model : Lifetimedistribution | ParametricLifetimeRegression
+    lifetime_model : parametric lifetime distribution or regression
         Lifetime Model used for intensity function of the NHPP
     n_assets : int
         Number of assets present in the sample
     n_failures_per_asset : int
         Number of failures to generate per asset (before censoring)
-    start_observation : float, optional
-        Start of the observation window. Defaults to 0.
-    end_observation : float, optional
-        End of the observation window. Defaults to np.inf.
-    covariates_labels : Sequence[str] | None, optional
-        Labels to use for covariates in the asset table. Defaults to None.
-    covariates_values : Sequence[Array1D[np.float64]] | None, optional
-        Values of the covariates, in broadcastable shape. Defaults to None.
+    time_window : tuple of float
+        Observation time window.
+    covariates_labels : sequence of str, optional
+        Labels to use for covariates in the asset table. Only usefull if
+        ``lifetime_model`` is a parametric regression. Defaults to None.
+    covariates_values : sequence of 1d-array of float, optional
+        Values of the covariates, in broadcastable shape. Only usefull if
+        ``lifetime_model`` is a parametric regression. Defaults to None.
 
     Returns
     -------
@@ -138,7 +155,7 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     Raises
     ------
     ValueError
-        If covariates shapes are missing with a regression
+        If covariates are missing with a regression
 
     Examples
     --------
@@ -158,6 +175,7 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     3   4    0.0   8.0      2.0       30
     """
 
+    start_observation, end_observation = time_window[0], time_window[1]
     # Ensure covariates make sense when using a regression
     if isinstance(lifetime_model, ParametricLifetimeRegression):
         if covariates_labels is None or covariates_values is None:
