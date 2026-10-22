@@ -1,6 +1,6 @@
 [
   {"name": "latest (dev)", "version": "latest", "url": "https://docs.assetlife.org/latest/"},
-  {"name": "v0.3.0", "version": "v0.3", "url": "https://docs.assetlife.org/v0.3/"},
+  {"name": "v0.3.1", "version": "v0.3", "url": "https://docs.assetlife.org/v0.3/"},
   {"name": "v0.2.0", "version": "v0.2", "url": "https://docs.assetlife.org/v0.2/"},
   {"name": "v0.1.5", "version": "v0.1", "url": "https://docs.assetlife.org/v0.1/"}
 ]
