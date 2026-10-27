@@ -36,5 +36,3 @@ docs/source/api/*
 # macOS
 .DS_Store
 
-# VSCode
-.vscode/

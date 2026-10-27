@@ -28,10 +28,6 @@ pre-commit:
           - name: format
             run: uv {run} ruff format --quiet {staged_files}
 
-    - name: pytest
-      glob: "*.{py,pyi}"
-      run: uv {run} pytest --quiet --no-summary
-
 post-checkout:
   jobs:
     - run: uv sync

@@ -212,25 +212,10 @@ Configure your IDE to:
 - on save, format with Ruff, apply Ruff's fixes **and sort the imports**. Formatting
   alone does not sort imports: this is a lint rule (`I001`), checked by the CI.
 
-For VS Code (and VSCodium), install the [Ruff][VSC-RUFF] and
-[BasedPyright][VSC-BASEDPYRIGHT] extensions, then add to your `.vscode/settings.json`:
-
-```json
-{
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.fixAll.ruff": "explicit",
-      "source.organizeImports.ruff": "explicit"
-    }
-  },
-  "ruff.importStrategy": "fromEnvironment"
-}
-```
-
-`"ruff.importStrategy": "fromEnvironment"` makes the extension use the Ruff version of
-`.venv` instead of its bundled one.
+For VS Code (and VSCodium), install the [Python][VSC-PYTHON], [Ruff][VSC-RUFF]
+and [BasedPyright][VSC-BASEDPYRIGHT] extensions. Configurations are in
+[.vscode](https://https://github.com/assetlife-project/assetlife/.vscode).Note
+that using Basedpyright with Pylance is not recommended. Deactivate Pylance.
 
 #### Lefthook <!-- omit in toc -->
 
@@ -250,11 +235,14 @@ Before each commit, the hooks run on your staged files:
 - `uv lock`, if `pyproject.toml` changed;
 - `dprint fmt`, on Markdown, TOML, YAML and JSON files;
 - `ruff check --fix` then `ruff format`, on Python files and notebooks;
-- `pytest`, if Python files changed.
 
-Fixes are added to your commit automatically. If a check still fails, the commit is
-aborted: fix the reported problems and commit again. After a checkout or a merge that
-changes `uv.lock`, the hooks also run `uv sync` to keep `.venv` up to date.
+Fixes are added to your commit automatically. If a check still fails, the
+commit is aborted: fix the reported problems and commit again. After a checkout
+or a merge that changes `uv.lock`, the hooks also run `uv sync` to keep `.venv`
+up to date.
+
+Tests are not run on commit to keep it fast: run `uv run pytest` yourself. CI
+runs them on pull requests and on pushes.
 
 #### Tox <!-- omit in toc -->
 
@@ -265,13 +253,14 @@ changes `uv.lock`, the hooks also run `uv sync` to keep `.venv` up to date.
 uv tool install tox --upgrade
 ```
 
-| Command             | Description                                                     |
-| ------------------- | --------------------------------------------------------------- |
-| `uvx tox p -m test` | Run the unit tests in parallel on all supported Python versions |
-| `uvx tox -e 3.12`   | Run the unit tests on a single Python version                   |
-| `uvx tox -m lint`   | Run the lint and format checks (`ruff` and `dprint`)            |
-| `uvx tox -m type`   | Run the static type checks (`basedpyright`)                     |
-| `uvx tox -e docs`   | Build the documentation (`sphinx`)                              |
+| Command                    | Description                                                     |
+| -------------------------- | --------------------------------------------------------------- |
+| `uvx tox p -m test`        | Run the unit tests in parallel on all supported Python versions |
+| `uvx tox -e 3.12`          | Run the unit tests on a single Python version                   |
+| `uvx tox -m lint`          | Run the lint and format checks (`ruff` and `dprint`)            |
+| `uvx tox -m type`          | Run the static type checks (`basedpyright`)                     |
+| `uvx tox -m docs`          | Build the current documentation (`sphinx`)                      |
+| `uvx tox -m docs-versions` | Build the documentation for all versions (`sphinx`)             |
 
 If a check fails, most problems can be fixed automatically:
 
@@ -411,5 +400,6 @@ own](https://github.com/bttger/contributing-gen)!
 [GIT]: https://git-scm.com/
 [NUMPYDOC]: https://numpydoc.readthedocs.io/en/latest/format.html
 [PANDOC]: https://pandoc.org/installing.html
+[VSC-PYTHON]: https://marketplace.visualstudio.com/items?itemName=ms-python.python
 [VSC-BASEDPYRIGHT]: https://marketplace.visualstudio.com/items?itemName=detachhead.basedpyright
 [VSC-RUFF]: https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff

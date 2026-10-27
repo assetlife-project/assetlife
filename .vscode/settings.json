@@ -1,0 +1,25 @@
+{
+  // Interpreter: let the Python extension pick ${workspaceFolder}/.venv
+  // (works on Linux, macOS and Windows, unlike a hard-coded path)
+  "python.terminal.activateEnvironment": true,
+
+  // Type checking: BasedPyright from .venv, Pylance turned off
+  "python.languageServer": "None",
+  "basedpyright.importStrategy": "fromEnvironment",
+  "basedpyright.analysis.diagnosticMode": "workspace",
+
+  // Linting and formatting: Ruff from .venv
+  "ruff.importStrategy": "fromEnvironment",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    },
+    "editor.rulers": [88]
+  },
+
+  // Notebooks: format only (lint is excluded for *.ipynb in pyproject.toml)
+  "notebook.formatOnSave.enabled": true,
+}
