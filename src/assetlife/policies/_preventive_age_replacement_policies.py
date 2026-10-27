@@ -449,7 +449,6 @@ class ABAOAgeReplacementPolicy(
         Underlying non-homogeneous Poisson process.
     """
 
-    @not_implemented_param("discouting_rate", zero_ok=True)
     @not_implemented_param("a0")
     @override
     def expected_net_present_value(
@@ -467,15 +466,37 @@ class ABAOAgeReplacementPolicy(
 
         timeline = np.linspace(0, tf, nb_steps, dtype=np.float64)
 
-        cumul_failures_at_ar = self.baseline.cumulative_intensity(ar)
-
+        # Euclidean division to get age of the asset counting replacements
+        # n_cycles and residual_age have same shape as timeline
         n_cycles, residual_age = np.divmod(timeline, ar)
 
-        total_costs = (
-            cp + cr * cumul_failures_at_ar
-        ) * n_cycles + cr * self.baseline.cumulative_intensity(residual_age)
+        if discounting_rate == 0:
+            cumul_failures_at_ar = self.baseline.cumulative_intensity(ar)
 
-        return timeline, total_costs
+            total_costs = (
+                cp + cr * cumul_failures_at_ar
+            ) * n_cycles + cr * self.baseline.cumulative_intensity(residual_age)
+
+            return timeline, total_costs
+
+        # Integrate the intensity to get the number of failures discounted
+        failure_costs = cr * legendre_quadrature(
+            lambda t: (
+                exp_discounting_factor(t, rate=discounting_rate)
+                * self.baseline.intensity(residual_age)
+            ),
+            0,
+            timeline,
+        )
+
+        # Sum over cycles considering discounted time
+        replacement_costs = cp * np.cumsum(
+            n_cycles.diff(axis=0)
+            * exp_discounting_factor(timeline, rate=discounting_rate),
+            axis=0,
+        )
+
+        return failure_costs + replacement_costs
 
     @override
     def asymptotic_expected_net_present_value(
@@ -489,7 +510,6 @@ class ABAOAgeReplacementPolicy(
         msg = "implementation will come in a future release"
         raise NotImplementedError(msg)
 
-    @not_implemented_param("discouting_rate", zero_ok=True)
     @not_implemented_param("a0")
     @override
     def expected_equivalent_annual_cost(
