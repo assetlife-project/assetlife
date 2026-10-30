@@ -10,29 +10,12 @@ User guides
 
     about_numpy
 
-Workflow demo
--------------
-
 .. toctree::
     :maxdepth: 2
+    :numbered:
 
-    workflow_demo.ipynb
+    getting_started
+    unique_events/index
+    sampling
 
-Lifetime models
----------------
-
-.. toctree::
-    :maxdepth: 1
-
-    non_parametric_lifetime_models.ipynb
-    lifetime_distributions.ipynb
-    lifetime_regressions.ipynb
-    semiparametric_regression.ipynb
-
-Sampling
---------
-
-.. toctree::
-    :maxdepth: 1
-
-    sampling.ipynb
+Guides on stochastic processes and maintenance policies are coming soon.
