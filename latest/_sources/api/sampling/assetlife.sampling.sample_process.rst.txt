@@ -1,0 +1,6 @@
+﻿sample\_process
+===============
+
+.. currentmodule:: assetlife.sampling
+
+.. autofunction:: sample_process

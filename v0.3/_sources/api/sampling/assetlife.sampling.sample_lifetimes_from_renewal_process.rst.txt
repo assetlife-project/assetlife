@@ -1,0 +1,6 @@
+﻿sample\_lifetimes\_from\_renewal\_process
+=========================================
+
+.. currentmodule:: assetlife.sampling
+
+.. autofunction:: sample_lifetimes_from_renewal_process
