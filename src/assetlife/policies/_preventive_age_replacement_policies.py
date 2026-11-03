@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import textwrap
 import warnings
+from collections.abc import Callable
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, override
 
 import numpy as np
@@ -23,6 +24,9 @@ if TYPE_CHECKING:
     import optype.numpy as onp
 
     from assetlife.typing import CoercibleFloat64_1D, Float64_1D, Timeline
+
+import functools
+import inspect
 
 R = TypeVar("R")
 P = ParamSpec("P")
@@ -401,6 +405,25 @@ def get_cr_cp(
         raise TypeError("Missing cr and cp values") from err
 
 
+def not_implemented_a0[**P, R](func: Callable[P, R]) -> Callable[P, R]:
+    sig = inspect.signature(func)
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        bound = sig.bind(*args, **kwargs)
+        bound.apply_defaults()
+        a0 = bound.arguments.get("a0")
+        if a0 is not None:
+            msg = (
+                f"{func.__qualname__}:"
+                " NHPP policies with initial ages will be covered in a future release"
+            )
+            raise ValueError(msg)
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 class RecurrentEventAgeReplacementPolicy(
     BaseAgeReplacementPolicy[NonHomogeneousPoissonProcess[()]]
 ):
@@ -453,6 +476,7 @@ class RecurrentEventAgeReplacementPolicy(
         raise NotImplementedError(msg)
 
     @override
+    @not_implemented_a0
     def asymptotic_expected_equivalent_annual_cost(
         self,
         *,
@@ -462,9 +486,6 @@ class RecurrentEventAgeReplacementPolicy(
         **costs: CoercibleFloat64_1D,
     ) -> Float64_1D:
         cr, cp = get_cr_cp(**costs)
-        if a0 is not None:
-            msg = "NHPP policies with initial ages will be covered in a future release"
-            raise ValueError(msg)
 
         if discounting_rate == 0:
             asymptotic_eeac = (
