@@ -401,10 +401,10 @@ def get_cr_cp(
         raise TypeError("Missing cr and cp values") from err
 
 
-class NonHomogeneousPoissonAgeReplacementPolicy(
+class RecurrentEventAgeReplacementPolicy(
     BaseAgeReplacementPolicy[NonHomogeneousPoissonProcess[()]]
 ):
-    r"""Age replacement policy for non-homogeneous Poisson processes.
+    r"""Age replacement policy for recurrent events.
 
     Parameters
     ----------
