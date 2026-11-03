@@ -200,8 +200,9 @@ testpaths = [
   "src/assetlife/stochastic_processes/tests",
   "src/assetlife/policies/tests",
   "src/assetlife/sampling/tests",
+  "docs/source/user_guides",
 ]
-addopts = ["-ra", "--doctest-modules"]
+addopts = ["-ra", "--doctest-modules", "--doctest-glob=*.rst"]
 doctest_optionflags = ["NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL", "ELLIPSIS"]
 filterwarnings = ["error"]
 log_level = "INFO"
