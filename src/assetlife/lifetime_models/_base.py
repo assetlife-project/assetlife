@@ -80,7 +80,7 @@ def _plot_probability_function(
             facecolors=[ax.lines[-1].get_color()],
             step=step,
             alpha=0.25,
-            label=f"IC-{alpha_ci}",
+            label=f"CI-{alpha_ci}",
         )
         ax.legend()
     if kwargs.get("label") is not None:

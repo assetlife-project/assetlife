@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
         with:
           python-version: "3.12"
 
@@ -41,6 +41,9 @@ jobs:
       fail-fast: false
       matrix:
         py: ["3.12", "3.14"]
+    env:
+      # Blocking only for PRs into main and pushes to main; advisory elsewhere (e.g. develop)
+      TYPECHECK_BLOCKING: ${{ github.base_ref == 'main' || github.ref == 'refs/heads/main' }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -52,11 +55,17 @@ jobs:
           activate-environment: true
           python-version: ${{ matrix.py }}
 
-      - name: uv sync #  dev group is synced by default
+      - name: uv sync #  dev group is synced by default
         run: uv sync --no-editable
 
       - name: basedpyright
+        id: basedpyright
+        continue-on-error: ${{ env.TYPECHECK_BLOCKING != 'true' }}
         run: basedpyright --warnings
+
+      - name: Flag advisory type errors
+        if: steps.basedpyright.outcome == 'failure' && env.TYPECHECK_BLOCKING != 'true'
+        run: echo "::warning title=basedpyright (advisory)::Type errors found. Not blocking on this branch; they must be fixed before develop → main."
 
   test:
     name: test
@@ -72,7 +81,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
         with:
           python-version: ${{ matrix.py }}
           activate-environment: true
