@@ -5,7 +5,7 @@ from __future__ import annotations
 import textwrap
 import warnings
 from collections.abc import Callable
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, override
+from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast, override
 
 import numpy as np
 from scipy.optimize import newton
@@ -23,7 +23,13 @@ from assetlife.stochastic_processes import (
 if TYPE_CHECKING:
     import optype.numpy as onp
 
-    from assetlife.typing import CoercibleFloat64_1D, Float64_1D, Timeline
+    from assetlife.typing import (
+        CoercibleFloat64_1D,
+        CoercibleFloat64_ND,
+        Float64_1D,
+        Float64_ND,
+        Timeline,
+    )
 
 import functools
 import inspect
@@ -424,6 +430,23 @@ def not_implemented_a0[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     return wrapper
 
 
+def reshape_ar[**P, R](func: Callable[P, R]) -> Callable[P, R]:
+    sig = inspect.signature(func)
+    if "ar" not in sig.parameters:
+        msg = f"{func.__qualname__} doit avoir un paramètre nommé 'ar'"
+        raise TypeError(msg)
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        bound = sig.bind(*args, **kwargs)
+        bound.arguments["ar"] = np.asarray(
+            bound.arguments["ar"], dtype=np.float64
+        ).reshape(-1, 1)
+        return cast("Callable[..., R]", func)(*bound.args, **bound.kwargs)
+
+    return wrapper
+
+
 class RecurrentEventAgeReplacementPolicy(
     BaseAgeReplacementPolicy[NonHomogeneousPoissonProcess[()]]
 ):
@@ -435,11 +458,12 @@ class RecurrentEventAgeReplacementPolicy(
         Underlying non-homogeneous Poisson process.
     """
 
+    @reshape_ar
     def _one_cycle_n_failures(
         self,
-        ar: CoercibleFloat64_1D,
+        ar: CoercibleFloat64_ND,
         discounting_rate: float = 0.0,
-    ) -> onp.Array1D[np.float64]:
+    ) -> Float64_ND:
 
         return np.asarray(
             legendre_quadrature(
@@ -454,27 +478,29 @@ class RecurrentEventAgeReplacementPolicy(
         )
 
     @staticmethod
+    @reshape_ar
     def _one_cycle_n_renewals(
         ar: CoercibleFloat64_1D,
         discounting_rate: float = 0.0,
-    ) -> onp.Array1D[np.float64]:
+    ) -> Float64_ND:
 
         return exp_discounting_factor(ar, rate=discounting_rate)
 
     @not_implemented_a0
+    @reshape_ar
     def _n_failures(
         self,
         timeline: Timeline,
         ar: CoercibleFloat64_1D,
         a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-method-argument]  # pyright: ignore[reportUnusedParameter]
         discounting_rate: float = 0.0,
-    ) -> onp.ArrayND[np.float64]:
+    ) -> Float64_ND:
 
         return np.asarray(
             legendre_quadrature(
                 lambda t: (
                     exp_discounting_factor(t, rate=discounting_rate)
-                    * self.baseline.intensity(t % ar.reshape(-1, 1))
+                    * self.baseline.intensity(t % ar)
                 ),
                 0,
                 timeline,
@@ -484,18 +510,22 @@ class RecurrentEventAgeReplacementPolicy(
 
     @staticmethod
     @not_implemented_a0
+    @reshape_ar
     def _n_renewals(
         timeline: Timeline,
         ar: CoercibleFloat64_1D,
         a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-static-method-argument]  # pyright: ignore[reportUnusedParameter]
         discounting_rate: float = 0.0,
-    ) -> onp.Array1D[np.float64]:
+    ) -> Float64_ND:
 
-        ratio = (
+        geometric_ratio = (
             1 - exp_discounting_factor((timeline // ar) * ar, rate=discounting_rate)
         ) / (1 - exp_discounting_factor(ar, rate=discounting_rate))
-        return np.asarray(
-            exp_discounting_factor(ar, rate=discounting_rate) * ratio, dtype=float
+        return (
+            RecurrentEventAgeReplacementPolicy._one_cycle_n_renewals(
+                ar, discounting_rate
+            )
+            * geometric_ratio
         )
 
     @override
