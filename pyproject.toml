@@ -14,7 +14,6 @@ dependencies = [
   "optype[numpy]>=0.17.1",
   "pandas>=2.3.3",
   "polars>=2.1.0",
-  "pydantic>=2.14.2",
   "scipy>=1.17.1",
   "typing-extensions>=4.16.0",
 ]

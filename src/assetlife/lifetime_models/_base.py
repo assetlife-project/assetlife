@@ -33,6 +33,7 @@ from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
+    from narwhals.typing import IntoDataFrame
 
 
 @overload
@@ -1157,10 +1158,7 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         ) * self.hf(time, *args)
 
     @abstractmethod
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
+    def init_params(self, observations: IntoDataFrame) -> onp.Array1D[np.float64]:
         """Init params with statistical heuristics from time data.
 
         Parameters:
@@ -1175,12 +1173,7 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
 
     @abstractmethod
     def init_likelihood(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[onp.Array1D[np.float64]] | None = None,
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
-        **kwargs: Any,
+        self, observations: IntoDataFrame, **kwargs: Any
     ) -> LifetimeLikelihood:
         r"""
         Initialize the lifetime likelihood used to fit the parameters.
