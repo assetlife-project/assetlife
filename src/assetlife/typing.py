@@ -1,9 +1,11 @@
 """Type variables and aliases."""
 
-from typing import TypeVarTuple
+from collections.abc import Mapping
+from typing import Any, TypeVarTuple
 
 import numpy as np
 import optype.numpy as onp
+from narwhals.typing import IntoDataFrame
 
 __all__ = [
     "CoercibleFloat64_1D",
@@ -12,6 +14,7 @@ __all__ = [
     "Float64_1D",
     "Float64_ND",
     "Seed",
+    "TabularDataset",
     "Timeline",
 ]
 
@@ -45,3 +48,6 @@ type Timeline = onp.Array1D[np.float64]
 type Seed = (
     int | np.random.Generator | np.random.BitGenerator | np.random.RandomState | None
 )
+
+#: Any tabular like dataset
+type TabularDataset = Mapping[str, Any] | IntoDataFrame
