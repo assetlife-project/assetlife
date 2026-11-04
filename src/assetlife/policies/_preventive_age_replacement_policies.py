@@ -453,8 +453,8 @@ class RecurrentEventAgeReplacementPolicy(
             dtype=float,
         )
 
-    def _one_cycle_n_renewals(  # ruff: ignore[no-self-use]
-        self,
+    @staticmethod
+    def _one_cycle_n_renewals(
         ar: CoercibleFloat64_1D,
         discounting_rate: float = 0.0,
     ) -> onp.Array1D[np.float64]:
@@ -482,12 +482,12 @@ class RecurrentEventAgeReplacementPolicy(
             dtype=float,
         )
 
+    @staticmethod
     @not_implemented_a0
-    def _n_renewals(  # ruff: ignore[no-self-use]
-        self,
+    def _n_renewals(
         timeline: Timeline,
         ar: CoercibleFloat64_1D,
-        a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-method-argument]  # pyright: ignore[reportUnusedParameter]
+        a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-static-method-argument]  # pyright: ignore[reportUnusedParameter]
         discounting_rate: float = 0.0,
     ) -> onp.Array1D[np.float64]:
 
