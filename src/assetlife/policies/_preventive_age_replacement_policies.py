@@ -435,6 +435,69 @@ class RecurrentEventAgeReplacementPolicy(
         Underlying non-homogeneous Poisson process.
     """
 
+    def _one_cycle_n_failures(
+        self,
+        ar: CoercibleFloat64_1D,
+        discounting_rate: float = 0.0,
+    ) -> onp.Array1D[np.float64]:
+
+        return np.asarray(
+            legendre_quadrature(
+                lambda t: (
+                    exp_discounting_factor(t, rate=discounting_rate)
+                    * self.baseline.intensity(t)
+                ),
+                0,
+                ar,
+            ),
+            dtype=float,
+        )
+
+    def _one_cycle_n_renewals(  # ruff: ignore[no-self-use]
+        self,
+        ar: CoercibleFloat64_1D,
+        discounting_rate: float = 0.0,
+    ) -> onp.Array1D[np.float64]:
+
+        return exp_discounting_factor(ar, rate=discounting_rate)
+
+    @not_implemented_a0
+    def _n_failures(
+        self,
+        timeline: Timeline,
+        ar: CoercibleFloat64_1D,
+        a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-method-argument]  # pyright: ignore[reportUnusedParameter]
+        discounting_rate: float = 0.0,
+    ) -> onp.ArrayND[np.float64]:
+
+        return np.asarray(
+            legendre_quadrature(
+                lambda t: (
+                    exp_discounting_factor(t, rate=discounting_rate)
+                    * self.baseline.intensity(t % ar.reshape(-1, 1))
+                ),
+                0,
+                timeline,
+            ),
+            dtype=float,
+        )
+
+    @not_implemented_a0
+    def _n_renewals(  # ruff: ignore[no-self-use]
+        self,
+        timeline: Timeline,
+        ar: CoercibleFloat64_1D,
+        a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-method-argument]  # pyright: ignore[reportUnusedParameter]
+        discounting_rate: float = 0.0,
+    ) -> onp.Array1D[np.float64]:
+
+        ratio = (
+            1 - exp_discounting_factor((timeline // ar) * ar, rate=discounting_rate)
+        ) / (1 - exp_discounting_factor(ar, rate=discounting_rate))
+        return np.asarray(
+            exp_discounting_factor(ar, rate=discounting_rate) * ratio, dtype=float
+        )
+
     @override
     def expected_net_present_value(
         self,
