@@ -411,25 +411,6 @@ def get_cr_cp(
         raise TypeError("Missing cr and cp values") from err
 
 
-def not_implemented_a0[**P, R](func: Callable[P, R]) -> Callable[P, R]:
-    sig = inspect.signature(func)
-
-    @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        bound = sig.bind(*args, **kwargs)
-        bound.apply_defaults()
-        a0 = bound.arguments.get("a0")
-        if a0 is not None:
-            msg = (
-                f"{func.__qualname__}:"
-                " NHPP policies with initial ages will be covered in a future release"
-            )
-            raise ValueError(msg)
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 def reshape_ar[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     sig = inspect.signature(func)
     if "ar" not in sig.parameters:
@@ -486,21 +467,23 @@ class RecurrentEventAgeReplacementPolicy(
 
         return exp_discounting_factor(ar, rate=discounting_rate)
 
-    @not_implemented_a0
     @reshape_ar
     def _n_failures(
         self,
         timeline: Timeline,
         ar: CoercibleFloat64_1D,
-        a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-method-argument]  # pyright: ignore[reportUnusedParameter]
+        a0: CoercibleFloat64_1D | None = None,
         discounting_rate: float = 0.0,
     ) -> Float64_ND:
+
+        if a0 is None:
+            a0 = np.zeros_like(ar)
 
         return np.asarray(
             legendre_quadrature(
                 lambda t: (
                     exp_discounting_factor(t, rate=discounting_rate)
-                    * self.baseline.intensity(t % ar)
+                    * self.baseline.intensity((t + a0) % ar)
                 ),
                 0,
                 timeline,
@@ -509,27 +492,28 @@ class RecurrentEventAgeReplacementPolicy(
         )
 
     @staticmethod
-    @not_implemented_a0
     @reshape_ar
     def _n_renewals(
         timeline: Timeline,
         ar: CoercibleFloat64_1D,
-        a0: CoercibleFloat64_1D | None = None,  # ruff: ignore[unused-static-method-argument]  # pyright: ignore[reportUnusedParameter]
+        a0: CoercibleFloat64_1D | None = None,
         discounting_rate: float = 0.0,
     ) -> Float64_ND:
 
-        geometric_ratio = (
-            1 - exp_discounting_factor((timeline // ar) * ar, rate=discounting_rate)
-        ) / (1 - exp_discounting_factor(ar, rate=discounting_rate))
-        return (
-            RecurrentEventAgeReplacementPolicy._one_cycle_n_renewals(
+        if a0 is None:
+            a0 = np.zeros_like(ar)
+
+        base_value = (
+            (1 - exp_discounting_factor((timeline // ar) * ar, rate=discounting_rate))
+            / (1 - exp_discounting_factor(ar, rate=discounting_rate))
+            * RecurrentEventAgeReplacementPolicy._one_cycle_n_renewals(
                 ar, discounting_rate
             )
-            * geometric_ratio
         )
 
+        return np.exp(-discounting_rate * (ar - a0)) * (1 + base_value)
+
     @override
-    @not_implemented_a0
     @reshape_ar
     def expected_net_present_value(
         self,
@@ -543,6 +527,7 @@ class RecurrentEventAgeReplacementPolicy(
     ) -> tuple[Timeline, onp.Array1D[np.float64] | onp.Array2D[np.float64]]:
         cr, cp = get_cr_cp(**costs)
         timeline = np.linspace(0, tf, nb_steps, dtype=np.float64)
+
         return timeline, cp * self._n_renewals(
             timeline, ar, a0, discounting_rate
         ) + cr * self._n_failures(timeline, ar, a0, discounting_rate)
@@ -561,10 +546,32 @@ class RecurrentEventAgeReplacementPolicy(
         one_cycle_npv = cp * self._one_cycle_n_renewals(
             ar, discounting_rate
         ) + cr * self._one_cycle_n_failures(ar, discounting_rate)
-        return (1 / (1 - exp_discounting_factor(ar, discounting_rate))) * one_cycle_npv
+        base_value = (
+            1 / (1 - exp_discounting_factor(ar, discounting_rate))
+        ) * one_cycle_npv
+
+        if a0 is not None:
+            a0 = np.asarray(a0).reshape(-1, 1)
+            first_cycle_costs = cp * np.exp(
+                -discounting_rate * (ar - a0)
+            ) + cr * np.asarray(
+                legendre_quadrature(
+                    lambda t: (
+                        exp_discounting_factor(t, rate=discounting_rate)
+                        * self.baseline.intensity(t + a0)
+                    ),
+                    0,
+                    ar - a0,
+                ),
+                dtype=float,
+            )
+            return (
+                first_cycle_costs + np.exp(-discounting_rate * (ar - a0)) * base_value
+            )
+
+        return base_value
 
     @override
-    @not_implemented_a0
     @reshape_ar
     def expected_equivalent_annual_cost(
         self,
@@ -584,7 +591,7 @@ class RecurrentEventAgeReplacementPolicy(
         ) * npv
 
     @override
-    @not_implemented_a0
+    @reshape_ar
     def asymptotic_expected_equivalent_annual_cost(
         self,
         *,
