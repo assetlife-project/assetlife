@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import textwrap
 import warnings
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, override
+from collections.abc import Callable
+from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast, override
 
 import numpy as np
 from scipy.optimize import newton
@@ -22,7 +23,16 @@ from assetlife.stochastic_processes import (
 if TYPE_CHECKING:
     import optype.numpy as onp
 
-    from assetlife.typing import CoercibleFloat64_1D, Float64_1D, Timeline
+    from assetlife.typing import (
+        CoercibleFloat64_1D,
+        CoercibleFloat64_ND,
+        Float64_1D,
+        Float64_ND,
+        Timeline,
+    )
+
+import functools
+import inspect
 
 R = TypeVar("R")
 P = ParamSpec("P")
@@ -401,10 +411,27 @@ def get_cr_cp(
         raise TypeError("Missing cr and cp values") from err
 
 
-class NonHomogeneousPoissonAgeReplacementPolicy(
+def reshape_ar[**P, R](func: Callable[P, R]) -> Callable[P, R]:
+    sig = inspect.signature(func)
+    if "ar" not in sig.parameters:
+        msg = f"{func.__qualname__} doit avoir un paramètre nommé 'ar'"
+        raise TypeError(msg)
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        bound = sig.bind(*args, **kwargs)
+        bound.arguments["ar"] = np.asarray(
+            bound.arguments["ar"], dtype=np.float64
+        ).reshape(-1, 1)
+        return cast("Callable[..., R]", func)(*bound.args, **bound.kwargs)
+
+    return wrapper
+
+
+class RecurrentEventAgeReplacementPolicy(
     BaseAgeReplacementPolicy[NonHomogeneousPoissonProcess[()]]
 ):
-    r"""Age replacement policy for non-homogeneous Poisson processes.
+    r"""Age replacement policy for recurrent events.
 
     Parameters
     ----------
@@ -412,7 +439,82 @@ class NonHomogeneousPoissonAgeReplacementPolicy(
         Underlying non-homogeneous Poisson process.
     """
 
+    @reshape_ar
+    def _one_cycle_n_failures(
+        self,
+        ar: CoercibleFloat64_ND,
+        discounting_rate: float = 0.0,
+    ) -> Float64_ND:
+
+        return np.asarray(
+            legendre_quadrature(
+                lambda t: (
+                    exp_discounting_factor(t, rate=discounting_rate)
+                    * self.baseline.intensity(t)
+                ),
+                0,
+                ar,
+            ),
+            dtype=float,
+        )
+
+    @staticmethod
+    @reshape_ar
+    def _one_cycle_n_renewals(
+        ar: CoercibleFloat64_1D,
+        discounting_rate: float = 0.0,
+    ) -> Float64_ND:
+
+        return exp_discounting_factor(ar, rate=discounting_rate)
+
+    @reshape_ar
+    def _n_failures(
+        self,
+        timeline: Timeline,
+        ar: CoercibleFloat64_1D,
+        a0: CoercibleFloat64_1D | None = None,
+        discounting_rate: float = 0.0,
+    ) -> Float64_ND:
+
+        if a0 is None:
+            a0 = np.zeros_like(ar)
+
+        return np.asarray(
+            legendre_quadrature(
+                lambda t: (
+                    exp_discounting_factor(t, rate=discounting_rate)
+                    * self.baseline.intensity((t + a0) % ar)
+                ),
+                0,
+                timeline,
+            ),
+            dtype=float,
+        )
+
+    @staticmethod
+    @reshape_ar
+    def _n_renewals(
+        timeline: Timeline,
+        ar: CoercibleFloat64_1D,
+        a0: CoercibleFloat64_1D | None = None,
+        discounting_rate: float = 0.0,
+    ) -> Float64_ND:
+
+        if a0 is None:
+            a0 = np.zeros_like(ar)
+
+        base_value = (
+            (1 - exp_discounting_factor((timeline // ar) * ar, rate=discounting_rate))
+            / (1 - exp_discounting_factor(ar, rate=discounting_rate))
+            * RecurrentEventAgeReplacementPolicy._one_cycle_n_renewals(
+                ar, discounting_rate
+            )
+        )
+
+        return np.exp(-discounting_rate * (ar - a0)) * (1 + base_value)
+
     @override
+    @reshape_ar
     def expected_net_present_value(
         self,
         tf: float,
@@ -423,10 +525,15 @@ class NonHomogeneousPoissonAgeReplacementPolicy(
         discounting_rate: float = 0.0,
         **costs: CoercibleFloat64_1D,
     ) -> tuple[Timeline, onp.Array1D[np.float64] | onp.Array2D[np.float64]]:
-        msg = "implementation will come in a future release"
-        raise NotImplementedError(msg)
+        cr, cp = get_cr_cp(**costs)
+        timeline = np.linspace(0, tf, nb_steps, dtype=np.float64)
+
+        return timeline, cp * self._n_renewals(
+            timeline, ar, a0, discounting_rate
+        ) + cr * self._n_failures(timeline, ar, a0, discounting_rate)
 
     @override
+    @reshape_ar
     def asymptotic_expected_net_present_value(
         self,
         *,
@@ -435,10 +542,37 @@ class NonHomogeneousPoissonAgeReplacementPolicy(
         discounting_rate: float = 0.0,
         **costs: CoercibleFloat64_1D,
     ) -> Float64_1D:
-        msg = "implementation will come in a future release"
-        raise NotImplementedError(msg)
+        cr, cp = get_cr_cp(**costs)
+        one_cycle_npv = cp * self._one_cycle_n_renewals(
+            ar, discounting_rate
+        ) + cr * self._one_cycle_n_failures(ar, discounting_rate)
+        base_value = (
+            1 / (1 - exp_discounting_factor(ar, discounting_rate))
+        ) * one_cycle_npv
+
+        if a0 is not None:
+            a0 = np.asarray(a0).reshape(-1, 1)
+            first_cycle_costs = cp * np.exp(
+                -discounting_rate * (ar - a0)
+            ) + cr * np.asarray(
+                legendre_quadrature(
+                    lambda t: (
+                        exp_discounting_factor(t, rate=discounting_rate)
+                        * self.baseline.intensity(t + a0)
+                    ),
+                    0,
+                    ar - a0,
+                ),
+                dtype=float,
+            )
+            return (
+                first_cycle_costs + np.exp(-discounting_rate * (ar - a0)) * base_value
+            )
+
+        return base_value
 
     @override
+    @reshape_ar
     def expected_equivalent_annual_cost(
         self,
         tf: float,
@@ -449,10 +583,15 @@ class NonHomogeneousPoissonAgeReplacementPolicy(
         discounting_rate: float = 0.0,
         **costs: CoercibleFloat64_1D,
     ) -> tuple[Timeline, onp.Array1D[np.float64] | onp.Array2D[np.float64]]:
-        msg = "implementation will come in a future release"
-        raise NotImplementedError(msg)
+        timeline, npv = self.expected_net_present_value(
+            tf, nb_steps, ar=ar, a0=a0, discounting_rate=discounting_rate, **costs
+        )
+        return (
+            discounting_rate / (1 - exp_discounting_factor(timeline, discounting_rate))
+        ) * npv
 
     @override
+    @reshape_ar
     def asymptotic_expected_equivalent_annual_cost(
         self,
         *,
@@ -462,32 +601,12 @@ class NonHomogeneousPoissonAgeReplacementPolicy(
         **costs: CoercibleFloat64_1D,
     ) -> Float64_1D:
         cr, cp = get_cr_cp(**costs)
-        if a0 is not None:
-            msg = "NHPP policies with initial ages will be covered in a future release"
-            raise ValueError(msg)
-
         if discounting_rate == 0:
-            asymptotic_eeac = (
-                cp + cr * legendre_quadrature(self.baseline.intensity, 0, ar)
-            ) / np.float64(ar)
-        else:
-            asymptotic_eeac = (
-                discounting_rate
-                * (
-                    cp * exp_discounting_factor(ar, rate=discounting_rate)
-                    + cr
-                    * legendre_quadrature(
-                        lambda t: (
-                            exp_discounting_factor(t, rate=discounting_rate)
-                            * self.baseline.intensity(t)
-                        ),
-                        0,
-                        ar,
-                    )
-                )
-                / (1 - exp_discounting_factor(ar, rate=discounting_rate))
-            )
-        return np.squeeze(asymptotic_eeac)  # () or (m,)
+            return (cp + cr * self._one_cycle_n_failures(ar)) / ar
+        _, npv = self.asymptotic_expected_net_present_value(
+            ar=ar, a0=a0, discounting_rate=discounting_rate, **costs
+        )
+        return discounting_rate * npv
 
     @override
     def compute_optimal_ar(
