@@ -99,7 +99,7 @@ renewals then split into two kinds, each with its own counter:
       - preventive replacements at ``ar``
 
 Every renewal is one or the other, so the two counters add up to the renewal function. With the
-optimal age of the :doc:`getting_started`, about 59 years:
+optimal age of the :doc:`../getting_started`, about 59 years:
 
 >>> timeline, m = renewal_process.renewal_function(tf=200., nb_steps=5, ar=58.8)
 >>> timeline, failures = renewal_process.expected_number_of_events(tf=200., nb_steps=5, ar=58.8)

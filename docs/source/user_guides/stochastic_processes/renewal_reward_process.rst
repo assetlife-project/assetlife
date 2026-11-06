@@ -47,7 +47,7 @@ the long run, it costs ``cf`` once every mean lifetime:
 The second case makes the amount depend on *why* the asset was renewed: a failure before ``ar``
 costs ``cf``, reaching ``ar`` costs ``cp``. ``cp`` and ``ar`` describe a single decision, so 
 they go together: one without the other raises an error.With the costs and the optimal age of 
-the :doc:`getting_started`:
+the :doc:`../getting_started`:
 
 >>> round(float(process.asymptotic_expected_equivalent_annual_worth(cf=11., cp=3., ar=58.8)), 5)
 0.09177
@@ -166,8 +166,7 @@ is the figure used to compare strategies.
 
 The dashed lines are the asymptotic values. Between about 59 and 76 years, age replacement is
 the most expensive strategy: every surviving asset is replaced at 58.8 years, while under run
-to failure most of them are still running. Beyond that, the failures it avoids make it cheaper, and
-the finite-horizon comparison converges to the asymptotic one.
+to failure most of them are still running.
 
 First-cycle rewards
 -------------------

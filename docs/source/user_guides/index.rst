@@ -16,8 +16,7 @@ User guides
 
     getting_started
     unique_events/index
-    renewal_process
-    renewal_reward_process
+    stochastic_processes/index
     sampling
 
 Guides on the other stochastic processes and on maintenance policies are coming soon.
