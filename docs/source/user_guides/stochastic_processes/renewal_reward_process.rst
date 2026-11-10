@@ -52,13 +52,13 @@ the :doc:`../getting_started`:
 >>> round(float(process.asymptotic_expected_equivalent_annual_worth(cf=11., cp=3., ar=58.8)), 5)
 0.09177
 
-Like ``a0`` and ``ar``, costs accept 1d arrays, which gives one result per value:
+Like ``a0`` and ``ar``, costs accept at most 1d arrays, which gives one result per value:
 
 >>> import numpy as np
 >>> process.asymptotic_expected_equivalent_annual_worth(
-...     cf=np.array([5., 11., 20.]), cp=3., ar=58.8
+...     cf=np.array([5., 11., 20.]), cp=3., ar=[58.8, 45., 27.]
 ... )
-array([0.06359451, 0.09177473, 0.13404506])
+array([0.06359451, 0.08735154, 0.12187421])
 
 Discounting
 -----------
@@ -96,14 +96,16 @@ each renewal contributes its discounted reward instead:
 Without discounting, it is simply the two counters of the :doc:`renewal_process` weighted by
 their costs:
 
->>> timeline, z = process.expected_total_reward(tf=200., nb_steps=5, cf=11., cp=3., ar=58.8)
+>>> timeline, z = process.expected_total_reward(tf=100., nb_steps=10, cf=11., cp=3., ar=58.8)
 >>> np.round(z, 3)
-array([ 0.   ,  1.69 ,  6.833, 11.976, 17.119])
->>> _, failures = process.expected_number_of_events(tf=200., nb_steps=5, ar=58.8)
->>> _, preventive = process.expected_number_of_preventive_renewals(tf=200., nb_steps=5, ar=58.8)
+array([0.   , 0.007, 0.088, 0.393, 1.11 , 2.392, 5.134, 5.289, 5.712,
+       6.559])
+>>> _, failures = process.expected_number_of_events(tf=100., nb_steps=10, ar=58.8)
+>>> _, preventive = process.expected_number_of_preventive_renewals(tf=100., nb_steps=10, ar=58.8)
 >>> bool(np.allclose(z, 11. * failures + 3. * preventive))
 True
 
+The jump between 55.56 and 66.67 years is the wave of preventive replacements at 58.8 years.
 The total grows with the horizon, so it does not compare well across strategies. The
 **equivalent annual worth** :math:`z(t) / AF(t)` turns it into a constant annual amount, which
 stabilizes over time. Each quantity also has an ``asymptotic_`` variant giving its limit for an
@@ -149,7 +151,7 @@ is the figure used to compare strategies.
     >>> process = RenewalRewardProcess(lifetime_model=weibull)
     >>> for label, costs in (
     ...     ("run to failure", {"cf": 11.}),
-    ...     ("ar = 58.8", {"cf": 11., "cp": 3., "ar": 58.8}),
+    ...     ("ar = 50", {"cf": 11., "cp": 3., "ar": 50}),
     ... ):
     ...     timeline, q = process.expected_equivalent_annual_worth(
     ...         tf=300., nb_steps=301, discounting_rate=0.04, **costs
@@ -164,9 +166,11 @@ is the figure used to compare strategies.
     >>> _ = plt.legend()
     >>> plt.show()
 
-The dashed lines are the asymptotic values. Between about 59 and 76 years, age replacement is
-the most expensive strategy: every surviving asset is replaced at 58.8 years, while under run
-to failure most of them are still running.
+The dashed lines are the asymptotic values. The age of replacement is set to 50 years for
+illustration only: it is not the optimum, 58.8 years, but it shows more replacement cycles, with
+a jump at 50, 100 and 150 years. Each jump is a wave of preventive replacements, smaller than the
+previous one, since failures shift the replacement dates and discounting makes later costs
+count less.
 
 First-cycle rewards
 -------------------
