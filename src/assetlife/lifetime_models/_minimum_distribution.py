@@ -1,15 +1,16 @@
-from collections.abc import Sequence
-from typing import Any, Literal, Self, final, override
+from collections.abc import Mapping, Sequence
+from typing import Any, Self, final, override
 
 import numpy as np
 import optype.numpy as onp
-from optype.numpy import Array, Array1D, ArrayND
+from narwhals.typing import IntoDataFrame
+from optype.numpy import ArrayND
 from scipy.optimize import Bounds
 
 from ._base import (
     FittableParametricLifetimeModel,
-    LifetimeLikelihood,
 )
+from ._likelihoods import LifetimeData, LifetimeLikelihood
 from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
 
@@ -126,36 +127,27 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         return self.baseline.get_params_bounds()
 
     @override
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
-        return self.baseline.init_params_from_time(time)
+    def _init_params(self, data: LifetimeData) -> onp.Array1D[np.float64]:
+        return self.baseline._init_params(data)  # ruff: ignore[private-member-access]
 
     @override
-    def init_likelihood(
+    def _init_likelihood(
         self,
-        time: Array1D[np.float64] | Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[Array1D[np.float64]] | None = None,
-        event: Array1D[np.bool_] | None = None,
-        entry: Array1D[np.float64] | None = None,
+        data: LifetimeData,
         **kwargs: Any,
     ) -> LifetimeLikelihood:
-        likelihood = self.baseline.init_likelihood(time, args, event, entry, **kwargs)
+        likelihood = self.baseline._init_likelihood(data, **kwargs)  # ruff: ignore[private-member-access]
         likelihood.model = MinimumDistribution(likelihood.model, self.n)
         return likelihood
 
     def fit(
         self,
-        time: Array1D[np.float64] | Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[Array1D[np.float64]] | None = None,
-        event: Array1D[np.bool_] | None = None,
-        entry: Array1D[np.float64] | None = None,
+        data: IntoDataFrame,
+        covar_columns: Sequence[str] = (),
+        *,
+        columns: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
-
-        optimizer = self.init_likelihood(time, args, event, entry, **kwargs)
-        self.fitting_results = optimizer.optimize()
-        self.set_params(self.fitting_results.optimal_params)
-
-        return self
+        return self._fit(
+            LifetimeData(data, columns=columns, covar_columns=covar_columns), **kwargs
+        )

@@ -9,8 +9,8 @@ ProportionalHazard is not Cox regression (Cox is semiparametric).
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Literal, Self, final, override
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Self, final, override
 
 import numpy as np
 from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
@@ -18,8 +18,6 @@ from scipy.optimize import Bounds
 
 from ._base import (
     FittableParametricLifetimeModel,
-    LifetimeData,
-    LifetimeLikelihood,
     ParametricLifetimeModel,
     document_args,
 )
@@ -27,11 +25,14 @@ from ._distributions import (
     Gamma,
     LifetimeDistribution,
 )
-from assetlife.base import FitConfig, FittingResults, ParametricModel
+from ._likelihoods import LifetimeData, LifetimeLikelihood
+from assetlife._optimization import FitConfig
+from assetlife.base import FittingResults, ParametricModel
 from assetlife.typing import CoercibleFloat64_ND
 
 if TYPE_CHECKING:
     import optype.numpy as onp
+    from narwhals.typing import IntoDataFrame
 
     from assetlife.typing import Float64_ND
 
@@ -278,31 +279,24 @@ class ParametricLifetimeRegression(
         )
 
     @override
-    def init_params_from_time(
+    def _init_params(
         self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
+        data: LifetimeData,
     ) -> onp.Array1D[np.float64]:
         param0 = np.zeros_like(self.get_params(), dtype=np.float64)
-        param0[-self.baseline.get_params().size :] = (
-            self.baseline.init_params_from_time(time)
-        )
+        param0[-self.baseline.get_params().size :] = self.baseline._init_params(data)  # ruff: ignore[private-member-access]
         return param0
 
     @override
-    def init_likelihood(
+    def _init_likelihood(
         self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[onp.Array1D[np.float64]] | None = None,
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
+        data: LifetimeData,
         **kwargs: Any,
     ) -> LifetimeLikelihood:
-        assert args is not None
         fresh_regression = type(self)(
-            type(self.baseline)(), coefficients=(0.0,) * len(args)
+            type(self.baseline)(), coefficients=(0.0,) * data.nb_covars
         )  # init new regression object with appropriate number of covar
-        lifetime_data = LifetimeData(time, event, entry, args)
-        x0 = kwargs.get("x0", fresh_regression.init_params_from_time(time))
+        x0 = kwargs.get("x0", fresh_regression._init_params(data))  # ruff: ignore[private-member-access]
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
@@ -313,14 +307,21 @@ class ParametricLifetimeRegression(
             "covariance_method",
             "2point" if isinstance(fresh_regression.baseline, Gamma) else "cs",
         )
-        return LifetimeLikelihood(fresh_regression, lifetime_data, config)
+        return LifetimeLikelihood(fresh_regression, data, config)
+
+    @override
+    def _fit(self, data: LifetimeData, **kwargs: Any) -> Self:
+        self.covar_effect.set_params(
+            [0.0] * len(data.complete_time_covars)
+        )  # resize coefficients
+        return super()._fit(data, **kwargs)
 
     def fit(
         self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        covar: onp.Array1D[np.float64] | Sequence[onp.Array1D[np.float64]],
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
+        data: IntoDataFrame,
+        covar_columns: Sequence[str],
+        *,
+        columns: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -367,16 +368,9 @@ class ParametricLifetimeRegression(
         self : ParametricLifetimeRegression
             The fitted model. Estimated parameters are set in place.
         """
-        if not isinstance(covar, Sequence):
-            covar = (covar,)
-        optimizer = self.init_likelihood(
-            time, args=covar, event=event, entry=entry, **kwargs
+        return self._fit(
+            LifetimeData(data, columns=columns, covar_columns=covar_columns), **kwargs
         )
-        self.fitting_results = optimizer.optimize()
-        self.covar_effect.set_params([0.0] * len(covar))  # modify nb coef inplace
-        self.set_params(self.fitting_results.optimal_params)
-
-        return self
 
 
 @final

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -20,18 +20,18 @@ from scipy.special import digamma, exp1, gamma, gammaincc, gammainccinv
 
 from ._base import (
     FittableParametricLifetimeModel,
-    LifetimeData,
-    LifetimeLikelihood,
     ParametricLifetimeModel,
     document_args,
 )
-from assetlife.base import FitConfig, FittingResults
+from ._likelihoods import LifetimeData, LifetimeLikelihood
+from assetlife._optimization import FitConfig
 from assetlife.quadratures import (
     laguerre_quadrature,
 )
 
 if TYPE_CHECKING:
     import optype.numpy as onp
+    from narwhals.typing import IntoDataFrame
 
     from assetlife.typing import CoercibleFloat64_ND, Float64_ND
 
@@ -40,8 +40,6 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
     """
     Base class for distribution model.
     """
-
-    fitting_results: FittingResults | None
 
     @override
     def get_params_bounds(self) -> Bounds:
@@ -133,10 +131,8 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         )
 
     @override
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
+    def _init_params(self, data: LifetimeData) -> onp.Array1D[np.float64]:
+        time = np.append(data.complete_time.flatten(), data.censored_time.flatten())
         # flatten in case of 2D time
         flatten_time = time.flatten()
         nb_params = self.get_params().size
@@ -145,18 +141,9 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         return param0
 
     @override
-    def init_likelihood(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[onp.Array1D[np.float64]] | None = None,
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
-        **kwargs: Any,
-    ) -> LifetimeLikelihood:
-        assert args is None
-        lifetime_data = LifetimeData(time, event=event, entry=entry)
+    def _init_likelihood(self, data: LifetimeData, **kwargs: Any) -> LifetimeLikelihood:
         fresh_distrib = type(self)()
-        x0 = kwargs.get("x0", fresh_distrib.init_params_from_time(time))
+        x0 = kwargs.get("x0", fresh_distrib._init_params(data))  # ruff: ignore[private-member-access]
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
             "bounds", fresh_distrib.get_params_bounds()
@@ -165,13 +152,13 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         config.covariance_method = kwargs.get(
             "covariance_method", "2point" if isinstance(fresh_distrib, Gamma) else "cs"
         )
-        return LifetimeLikelihood(fresh_distrib, lifetime_data, config)
+        return LifetimeLikelihood(fresh_distrib, data, config)
 
     def fit(
         self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
+        data: IntoDataFrame,
+        *,
+        columns: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -215,11 +202,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         self : ParametricLifetimeRegression
             The fitted model. Estimated parameters are set in place.
         """
-        optimizer = self.init_likelihood(time, event=event, entry=entry, **kwargs)
-        self.fitting_results = optimizer.optimize()
-        self.set_params(self.fitting_results.optimal_params)
-
-        return self
+        return self._fit(LifetimeData(data, columns=columns), **kwargs)
 
 
 @final
