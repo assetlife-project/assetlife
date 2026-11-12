@@ -440,8 +440,7 @@ class RecurrentEventAgeReplacementPolicy(
         ar: CoercibleFloat64_1D,
         discounting_rate: float = 0.0,
     ) -> onp.Array1D[np.float64]:
-
-        return exp_discounting_factor(ar, rate=discounting_rate)
+        return np.ravel(exp_discounting_factor(ar, rate=discounting_rate))
 
     def _n_failures(
         self,
@@ -581,10 +580,11 @@ class RecurrentEventAgeReplacementPolicy(
         cr, cp = get_cr_cp(**costs)
         if discounting_rate == 0:
             return (cp + cr * self._one_cycle_n_failures(ar)) / ar
-        _, npv = self.asymptotic_expected_net_present_value(
+        return np.float64(
+            discounting_rate
+        ) * self.asymptotic_expected_net_present_value(
             ar=ar, a0=a0, discounting_rate=discounting_rate, cr=cr, cp=cp
         )
-        return discounting_rate * npv
 
     @override
     def compute_optimal_ar(
