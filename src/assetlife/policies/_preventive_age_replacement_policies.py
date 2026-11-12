@@ -609,7 +609,7 @@ class RecurrentEventAgeReplacementPolicy(
         """
         cr, cp = get_cr_cp(**costs)
 
-        x0 = np.atleast_2d(self.baseline.lifetime_model.mean())
+        x0 = np.asarray(self.baseline.lifetime_model.mean())
 
         def eq(a: onp.ArrayND[np.float64]) -> onp.ArrayND[np.float64]:
             if discounting_rate != 0:
