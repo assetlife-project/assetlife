@@ -101,6 +101,11 @@ class TimeWindowObserver:
         """Current simulated timeline."""
         return self._timeline
 
+    @property
+    def bounded_timeline(self) -> onp.ArrayND[np.float64]:
+        """Current simulated timeline, stopped at tf"""
+        return np.where(self._timeline > self.tf, self.tf, self._timeline)
+
     def add_to_timeline(self, time: onp.ArrayND[np.float64]) -> None:
         """Add sampled times to the current timeline."""
         self._timeline += time
@@ -181,7 +186,7 @@ class SampleStep:
             ]),
         )
 
-        struct_arr["timeline"] = time_window.timeline[observed_step]
+        struct_arr["timeline"] = time_window.bounded_timeline[observed_step]
         struct_arr["time"] = (
             self.residual_time[observed_step] + self.entry[observed_step]
         )
