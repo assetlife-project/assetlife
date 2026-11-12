@@ -462,6 +462,7 @@ class RecurrentEventAgeReplacementPolicy(
                 ),
                 0,
                 timeline.reshape(-1, 1),
+                args=(ar, a0),
             ),
             dtype=float,
         )
@@ -477,6 +478,9 @@ class RecurrentEventAgeReplacementPolicy(
         ar = np.float64(ar)
         if a0 is None:
             a0 = np.zeros_like(ar)
+
+        if discounting_rate == 0:
+            return timeline.reshape(-1, 1) // ar
 
         base_value = (
             (
@@ -525,6 +529,11 @@ class RecurrentEventAgeReplacementPolicy(
         one_cycle_npv = cp * self._one_cycle_n_renewals(
             ar, discounting_rate
         ) + cr * self._one_cycle_n_failures(ar, discounting_rate)
+
+        # If no discounting, the total expected is either 0 or inf
+        if discounting_rate == 0:
+            return np.where(one_cycle_npv == 0, 0, np.inf)
+
         base_value = (
             1 / (1 - exp_discounting_factor(ar, discounting_rate))
         ) * one_cycle_npv
@@ -541,6 +550,7 @@ class RecurrentEventAgeReplacementPolicy(
                     ),
                     0,
                     ar - a0,
+                    args=(ar, a0),
                 ),
                 dtype=float,
             )
@@ -564,8 +574,11 @@ class RecurrentEventAgeReplacementPolicy(
         timeline, npv = self.expected_net_present_value(
             tf, nb_steps, ar=ar, a0=a0, discounting_rate=discounting_rate, **costs
         )
+        if discounting_rate == 0:
+            return timeline, npv / timeline.reshape(-1, 1)
         return timeline, (
-            discounting_rate / (1 - exp_discounting_factor(timeline, discounting_rate))
+            discounting_rate
+            / (1 - exp_discounting_factor(timeline.reshape(-1, 1), discounting_rate))
         ) * npv
 
     @override
