@@ -16,6 +16,7 @@ User guides
 
     getting_started
     unique_events/index
+    stochastic_processes/index
     sampling
 
-Guides on stochastic processes and maintenance policies are coming soon.
+Guides on the other stochastic processes and on maintenance policies are coming soon.
