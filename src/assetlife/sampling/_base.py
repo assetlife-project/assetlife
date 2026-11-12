@@ -107,7 +107,6 @@ class TimeWindowObserver:
         # update counters
         self._crossed_t0_counter[self.timeline > self.t0] += 1
         self._crossed_tf_counter[self.timeline > self.tf] += 1
-        self._timeline[self.just_crossed_tf] = self.tf
 
     @property
     def just_crossed_t0(self) -> onp.ArrayND[np.bool_]:
@@ -143,7 +142,7 @@ class SampleStep:
     def apply_time_window(self, time_window: TimeWindowObserver) -> None:
         """Adjust the step to the observation time window."""
         last_date = time_window.timeline - self.residual_time
-        installation_date = np.where(last_date < 0, 0, last_date) - self.entry
+        installation_date = last_date - self.entry
 
         self.entry = np.where(
             time_window.just_crossed_t0,
