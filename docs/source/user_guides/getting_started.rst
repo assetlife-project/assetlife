@@ -183,11 +183,10 @@ these numbers come from.
     is *as good as new* at the unique event after replacement, which is what a lifetime model
     describes. When the asset is repaired instead, it is *as bad as old*, the decision becomes
     when to stop repairing and replace: 
-    :py:class:`~assetlife.policies.NonHomogeneousPoissonAgeReplacementPolicy` is built on a
+    :py:class:`~assetlife.policies.RecurrentEventAgeReplacementPolicy` is built on a
     non-homogeneous Poisson process rather than on a lifetime model. Each policy also comes in
     a *renewal* variant, for planning a fleet over the long run, and a *one-cycle* variant, for
-    a decision about the asset currently in service. See the maintenance policies of the
-    :doc:`/api/index`.
+    a decision about the asset currently in service. See :doc:`maintenance_policies/index`.
 
 .. _gs_consequences:
 
