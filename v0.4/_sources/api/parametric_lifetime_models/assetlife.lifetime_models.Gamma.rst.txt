@@ -1,0 +1,126 @@
+﻿
+
+
+
+Gamma
+=====
+
+.. currentmodule:: assetlife.lifetime_models
+
+.. autoclass:: Gamma
+    :members:
+    :inherited-members:
+    :exclude-members: __init__, __new__
+    :member-order: alphabetical
+
+    
+    .. rubric:: Methods
+
+    .. autosummary::
+        :nosignatures:
+
+    
+        
+        
+            ~Gamma.apply_condition
+        
+        
+            ~Gamma.cdf
+        
+        
+            ~Gamma.chf
+        
+        
+            ~Gamma.dhf
+        
+        
+            ~Gamma.fit
+        
+        
+            ~Gamma.freeze
+        
+        
+            ~Gamma.get_params
+        
+        
+            ~Gamma.get_params_bounds
+        
+        
+            ~Gamma.hf
+        
+        
+            ~Gamma.ichf
+        
+        
+            ~Gamma.init_likelihood
+        
+        
+            ~Gamma.init_params_from_time
+        
+        
+            ~Gamma.is_fitted
+        
+        
+            ~Gamma.is_parametrized
+        
+        
+            ~Gamma.isf
+        
+        
+            ~Gamma.jac_cdf
+        
+        
+            ~Gamma.jac_chf
+        
+        
+            ~Gamma.jac_hf
+        
+        
+            ~Gamma.jac_pdf
+        
+        
+            ~Gamma.jac_sf
+        
+        
+            ~Gamma.load
+        
+        
+            ~Gamma.ls_integrate
+        
+        
+            ~Gamma.mean
+        
+        
+            ~Gamma.median
+        
+        
+            ~Gamma.moment
+        
+        
+            ~Gamma.mrl
+        
+        
+            ~Gamma.pdf
+        
+        
+            ~Gamma.plot
+        
+        
+            ~Gamma.ppf
+        
+        
+            ~Gamma.rvs
+        
+        
+            ~Gamma.save
+        
+        
+            ~Gamma.set_params
+        
+        
+            ~Gamma.sf
+        
+        
+            ~Gamma.var
+        
+    

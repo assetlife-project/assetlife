@@ -104,7 +104,7 @@ Maintenance policies
     OneCycleAgeReplacementPolicy
     RunToFailurePolicy
     OneCycleRunToFailurePolicy
-    NonHomogeneousPoissonAgeReplacementPolicy
+    RecurrentEventAgeReplacementPolicy
 
 Built-in datasets
 -----------------

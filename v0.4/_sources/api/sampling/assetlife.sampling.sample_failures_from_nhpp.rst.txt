@@ -1,0 +1,6 @@
+﻿sample\_failures\_from\_nhpp
+============================
+
+.. currentmodule:: assetlife.sampling
+
+.. autofunction:: sample_failures_from_nhpp

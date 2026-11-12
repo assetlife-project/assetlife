@@ -1,0 +1,39 @@
+﻿
+
+
+
+RecurrentEventAgeReplacementPolicy
+==================================
+
+.. currentmodule:: assetlife.policies
+
+.. autoclass:: RecurrentEventAgeReplacementPolicy
+    :members:
+    :inherited-members:
+    :exclude-members: __init__, __new__
+    :member-order: alphabetical
+
+    
+    .. rubric:: Methods
+
+    .. autosummary::
+        :nosignatures:
+
+    
+        
+        
+            ~RecurrentEventAgeReplacementPolicy.asymptotic_expected_equivalent_annual_cost
+        
+        
+            ~RecurrentEventAgeReplacementPolicy.asymptotic_expected_net_present_value
+        
+        
+            ~RecurrentEventAgeReplacementPolicy.compute_optimal_ar
+        
+        
+            ~RecurrentEventAgeReplacementPolicy.expected_equivalent_annual_cost
+        
+        
+            ~RecurrentEventAgeReplacementPolicy.expected_net_present_value
+        
+    
