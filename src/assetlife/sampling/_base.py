@@ -101,13 +101,17 @@ class TimeWindowObserver:
         """Current simulated timeline."""
         return self._timeline
 
+    @property
+    def bounded_timeline(self) -> onp.ArrayND[np.float64]:
+        """Current simulated timeline, stopped at tf"""
+        return np.where(self._timeline > self.tf, self.tf, self._timeline)
+
     def add_to_timeline(self, time: onp.ArrayND[np.float64]) -> None:
         """Add sampled times to the current timeline."""
         self._timeline += time
         # update counters
         self._crossed_t0_counter[self.timeline > self.t0] += 1
         self._crossed_tf_counter[self.timeline > self.tf] += 1
-        self._timeline[self.just_crossed_tf] = self.tf
 
     @property
     def just_crossed_t0(self) -> onp.ArrayND[np.bool_]:
@@ -143,7 +147,7 @@ class SampleStep:
     def apply_time_window(self, time_window: TimeWindowObserver) -> None:
         """Adjust the step to the observation time window."""
         last_date = time_window.timeline - self.residual_time
-        installation_date = np.where(last_date < 0, 0, last_date) - self.entry
+        installation_date = last_date - self.entry
 
         self.entry = np.where(
             time_window.just_crossed_t0,
@@ -182,7 +186,7 @@ class SampleStep:
             ]),
         )
 
-        struct_arr["timeline"] = time_window.timeline[observed_step]
+        struct_arr["timeline"] = time_window.bounded_timeline[observed_step]
         struct_arr["time"] = (
             self.residual_time[observed_step] + self.entry[observed_step]
         )
@@ -308,7 +312,7 @@ class StochasticDataIterator[
         sample_step = SampleStep(observed_time, event, entry)
         sample_step.apply_time_window(self.time_window_observer)
 
-        self.update_current_ages(residual_time)
+        self.update_current_ages(sample_step.residual_time)
         self.replacement_cycle += 1
         return sample_step
 
