@@ -312,7 +312,7 @@ class StochasticDataIterator[
         sample_step = SampleStep(observed_time, event, entry)
         sample_step.apply_time_window(self.time_window_observer)
 
-        self.update_current_ages(residual_time)
+        self.update_current_ages(sample_step.residual_time)
         self.replacement_cycle += 1
         return sample_step
 
