@@ -424,31 +424,36 @@ class MaximumLikelihoodOptimizer[M: ParametricModel, D](ABC):
                 stacklevel=2,
             )
 
-        if self.config.covariance_method is False:
-            return fitting_results
+        match self.config.covariance_method:
+            case False:
+                return fitting_results
+            case "exact":
+                hess_fn = self.config.scipy_minimize_options.get("hess", None)
+                if hess_fn is None:
+                    return fitting_results
+                hess = hess_fn(fitting_results.optimal_params)
+            case "2point" | "cs":
+                jac = self.config.scipy_minimize_options.get("jac", None)
+                if jac is None:
+                    return fitting_results
+                hess = _approx_parameters_hess(
+                    fitting_results.optimal_params,
+                    jac,
+                    method=self.config.covariance_method,
+                )
 
-        jac = self.config.scipy_minimize_options.get("jac", None)
-        hess = self.config.scipy_minimize_options.get("hess", None)
-        if jac is not None and self.config.covariance_method != "exact":
-            fitting_results.covariance_matrix = _approx_parameters_covariance(
-                fitting_results.optimal_params,
-                jac,
-                method=self.config.covariance_method,
-            )
-        if hess is not None and self.config.covariance_method == "exact":
-            fitting_results.covariance_matrix = np.linalg.pinv(
-                hess(fitting_results.optimal_params),
-            )
+        fitting_results.covariance_matrix = _get_covariance_matrix(hess)
+
         return fitting_results
 
 
-def _approx_parameters_covariance(
+def _approx_parameters_hess(
     params: onp.Array1D[np.float64],
     jac_negative_log: Callable[[onp.Array1D[np.number]], onp.Array1D[np.number]],
     method: Literal["2point", "cs"] = "cs",
-) -> onp.Array2D[np.float64] | None:
+) -> onp.Array2D[np.float64]:
     """
-    Approximate the covariance matrix of fitted parameters.
+    Approximate the hessian matrix of fitted parameters.
 
     Parameters
     ----------
@@ -482,7 +487,7 @@ def _approx_parameters_covariance(
                 eps,
             )
         return hess
-    # hessian cs
+
     u = eps * 1j * np.eye(size)
     complex_params = params.astype(np.complex64)  # change params to complex
     for i in range(size):
@@ -490,6 +495,21 @@ def _approx_parameters_covariance(
             hess[i, j] = np.imag(jac_negative_log(complex_params + u[i])[j]) / eps
             if i != j:
                 hess[j, i] = hess[i, j]
+    return hess
+
+
+def _get_covariance_matrix(
+    hess: onp.Array2D[np.float64],
+) -> onp.Array2D[np.float64] | None:
+    """
+    Get the covariance matrix from the hessian.
+
+    Parameters
+    ----------
+    hess : onp.Array2D[np.float64]
+        The hessian matrix
+    """
+
     covariance_matrix = None
     try:
         covariance_matrix = np.linalg.pinv(hess).astype(np.float64)

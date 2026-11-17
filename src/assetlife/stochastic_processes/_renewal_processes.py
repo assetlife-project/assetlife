@@ -611,7 +611,7 @@ class RenewalRewardProcess(RenewalProcess):
         def func(t: CoercibleFloat64_ND) -> Float64_ND:
             return self.lifetime_model.apply_condition(ar=ar).ls_integrate(
                 lambda x: (
-                    compute_rewards(x, cf=cf, a0=a0, cp=cp, ar=ar)
+                    compute_rewards(x, cf=cf, cp=cp, ar=ar)
                     * exp_discounting_factor(x, discounting_rate)
                 ),
                 np.zeros_like(t),
