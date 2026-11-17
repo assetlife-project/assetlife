@@ -104,7 +104,7 @@ class TimeWindowObserver:
     @property
     def bounded_timeline(self) -> onp.ArrayND[np.float64]:
         """Current simulated timeline, stopped at tf"""
-        return np.where(self._timeline > self.tf, self.tf, self._timeline)
+        return np.minimum(self._timeline, self.tf)
 
     def add_to_timeline(self, time: onp.ArrayND[np.float64]) -> None:
         """Add sampled times to the current timeline."""
