@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.4.0" />
+  <meta name="docsearch:version" content="0.4.1" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -953,6 +953,7 @@
                 <span class="p">),</span>
                 <span class="mi">0</span><span class="p">,</span>
                 <span class="n">timeline</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">ar</span><span class="p">,</span> <span class="n">a0</span><span class="p">),</span>
             <span class="p">),</span>
             <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
         <span class="p">)</span>
@@ -968,6 +969,9 @@
         <span class="n">ar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">a0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">a0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">discounting_rate</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">timeline</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">ar</span>
 
         <span class="n">base_value</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">(</span>
@@ -1021,6 +1025,11 @@
         <span class="n">one_cycle_npv</span> <span class="o">=</span> <span class="n">cp</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_one_cycle_n_renewals</span><span class="p">(</span>
             <span class="n">ar</span><span class="p">,</span> <span class="n">discounting_rate</span>
         <span class="p">)</span> <span class="o">+</span> <span class="n">cr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_one_cycle_n_failures</span><span class="p">(</span><span class="n">ar</span><span class="p">,</span> <span class="n">discounting_rate</span><span class="p">)</span>
+
+        <span class="c1"># If no discounting, the total expected is either 0 or inf</span>
+        <span class="k">if</span> <span class="n">discounting_rate</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">one_cycle_npv</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+
         <span class="n">base_value</span> <span class="o">=</span> <span class="p">(</span>
             <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">exp_discounting_factor</span><span class="p">(</span><span class="n">ar</span><span class="p">,</span> <span class="n">discounting_rate</span><span class="p">))</span>
         <span class="p">)</span> <span class="o">*</span> <span class="n">one_cycle_npv</span>
@@ -1037,6 +1046,7 @@
                     <span class="p">),</span>
                     <span class="mi">0</span><span class="p">,</span>
                     <span class="n">ar</span> <span class="o">-</span> <span class="n">a0</span><span class="p">,</span>
+                    <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">ar</span><span class="p">,</span> <span class="n">a0</span><span class="p">),</span>
                 <span class="p">),</span>
                 <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
             <span class="p">)</span>
@@ -1063,8 +1073,11 @@
         <span class="n">timeline</span><span class="p">,</span> <span class="n">npv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">expected_net_present_value</span><span class="p">(</span>
             <span class="n">tf</span><span class="p">,</span> <span class="n">nb_steps</span><span class="p">,</span> <span class="n">ar</span><span class="o">=</span><span class="n">ar</span><span class="p">,</span> <span class="n">a0</span><span class="o">=</span><span class="n">a0</span><span class="p">,</span> <span class="n">discounting_rate</span><span class="o">=</span><span class="n">discounting_rate</span><span class="p">,</span> <span class="o">**</span><span class="n">costs</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="n">discounting_rate</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">timeline</span><span class="p">,</span> <span class="n">npv</span> <span class="o">/</span> <span class="n">timeline</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">timeline</span><span class="p">,</span> <span class="p">(</span>
-            <span class="n">discounting_rate</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">exp_discounting_factor</span><span class="p">(</span><span class="n">timeline</span><span class="p">,</span> <span class="n">discounting_rate</span><span class="p">))</span>
+            <span class="n">discounting_rate</span>
+            <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">exp_discounting_factor</span><span class="p">(</span><span class="n">timeline</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">discounting_rate</span><span class="p">))</span>
         <span class="p">)</span> <span class="o">*</span> <span class="n">npv</span></div>
 
 
@@ -1114,7 +1127,7 @@
 <span class="sd">        """</span>
         <span class="n">cr</span><span class="p">,</span> <span class="n">cp</span> <span class="o">=</span> <span class="n">get_cr_cp</span><span class="p">(</span><span class="o">**</span><span class="n">costs</span><span class="p">)</span>
 
-        <span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span><span class="o">.</span><span class="n">lifetime_model</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span><span class="o">.</span><span class="n">lifetime_model</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">eq</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">ArrayND</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">discounting_rate</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>

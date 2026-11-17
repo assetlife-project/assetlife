@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.4.0" />
+  <meta name="docsearch:version" content="0.4.1" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -899,33 +899,38 @@
                 <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">covariance_method</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">fitting_results</span>
+        <span class="k">match</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">covariance_method</span><span class="p">:</span>
+            <span class="k">case</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">fitting_results</span>
+            <span class="k">case</span> <span class="s2">"exact"</span><span class="p">:</span>
+                <span class="n">hess_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">scipy_minimize_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"hess"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">hess_fn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">fitting_results</span>
+                <span class="n">hess</span> <span class="o">=</span> <span class="n">hess_fn</span><span class="p">(</span><span class="n">fitting_results</span><span class="o">.</span><span class="n">optimal_params</span><span class="p">)</span>
+            <span class="k">case</span> <span class="s2">"2point"</span> <span class="o">|</span> <span class="s2">"cs"</span><span class="p">:</span>
+                <span class="n">jac</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">scipy_minimize_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"jac"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">jac</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">fitting_results</span>
+                <span class="n">hess</span> <span class="o">=</span> <span class="n">_approx_parameters_hess</span><span class="p">(</span>
+                    <span class="n">fitting_results</span><span class="o">.</span><span class="n">optimal_params</span><span class="p">,</span>
+                    <span class="n">jac</span><span class="p">,</span>
+                    <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">covariance_method</span><span class="p">,</span>
+                <span class="p">)</span>
 
-        <span class="n">jac</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">scipy_minimize_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"jac"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">hess</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">scipy_minimize_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"hess"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">jac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">covariance_method</span> <span class="o">!=</span> <span class="s2">"exact"</span><span class="p">:</span>
-            <span class="n">fitting_results</span><span class="o">.</span><span class="n">covariance_matrix</span> <span class="o">=</span> <span class="n">_approx_parameters_covariance</span><span class="p">(</span>
-                <span class="n">fitting_results</span><span class="o">.</span><span class="n">optimal_params</span><span class="p">,</span>
-                <span class="n">jac</span><span class="p">,</span>
-                <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">covariance_method</span><span class="p">,</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="n">hess</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">covariance_method</span> <span class="o">==</span> <span class="s2">"exact"</span><span class="p">:</span>
-            <span class="n">fitting_results</span><span class="o">.</span><span class="n">covariance_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span>
-                <span class="n">hess</span><span class="p">(</span><span class="n">fitting_results</span><span class="o">.</span><span class="n">optimal_params</span><span class="p">),</span>
-            <span class="p">)</span>
+        <span class="n">fitting_results</span><span class="o">.</span><span class="n">covariance_matrix</span> <span class="o">=</span> <span class="n">_get_covariance_matrix</span><span class="p">(</span><span class="n">hess</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="n">fitting_results</span></div>
 </div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_approx_parameters_covariance</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_approx_parameters_hess</span><span class="p">(</span>
     <span class="n">params</span><span class="p">:</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array1D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
     <span class="n">jac_negative_log</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">onp</span><span class="o">.</span><span class="n">Array1D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">]],</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array1D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">]],</span>
     <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"2point"</span><span class="p">,</span> <span class="s2">"cs"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"cs"</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array2D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array2D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Approximate the covariance matrix of fitted parameters.</span>
+<span class="sd">    Approximate the hessian matrix of fitted parameters.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -959,7 +964,7 @@
                 <span class="n">eps</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">hess</span>
-    <span class="c1"># hessian cs</span>
+
     <span class="n">u</span> <span class="o">=</span> <span class="n">eps</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
     <span class="n">complex_params</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>  <span class="c1"># change params to complex</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
@@ -967,6 +972,21 @@
             <span class="n">hess</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">jac_negative_log</span><span class="p">(</span><span class="n">complex_params</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="n">j</span><span class="p">])</span> <span class="o">/</span> <span class="n">eps</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">:</span>
                 <span class="n">hess</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hess</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">hess</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_covariance_matrix</span><span class="p">(</span>
+    <span class="n">hess</span><span class="p">:</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array2D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">onp</span><span class="o">.</span><span class="n">Array2D</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Get the covariance matrix from the hessian.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hess : onp.Array2D[np.float64]</span>
+<span class="sd">        The hessian matrix</span>
+<span class="sd">    """</span>
+
     <span class="n">covariance_matrix</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">covariance_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">hess</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>

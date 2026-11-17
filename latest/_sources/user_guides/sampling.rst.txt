@@ -39,7 +39,7 @@ The result is a named tuple of ``time``, ``event`` and ``entry``:
 >>> print(weibull.get_params())
 [7.   0.05]
 >>> print(Weibull().fit(*lifetime_sample).get_params())
-[7.61306357 0.0492674 ]
+[7.7216483  0.05071813]
 
 To generate observations with different ``covar``, we can loop on
 ``sample_lifetimes_from_renewal_process`` for different values of ``covar``:
