@@ -318,9 +318,9 @@ class ParametricLifetimeRegression(
     def fit(
         self,
         dataset: IntoDataFrame,
-        covar_columns: Sequence[str],
+        covar_column_names: Sequence[str],
         *,
-        columns: Mapping[str, str] | None = None,
+        field_column_names: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -345,7 +345,7 @@ class ParametricLifetimeRegression(
 
             An optional ``entry`` column of floats holds left truncation values
             (``0.`` if missing). Other columns are ignored, except covariates
-            selected with ``covar_columns``.
+            selected with ``covar_column_names``.
         covar_column_names : sequence of str
             Names of the covariate columns in ``dataset``. Each covariate must
             be a column of floats.
@@ -375,7 +375,9 @@ class ParametricLifetimeRegression(
         """
         return self._fit(
             LifetimeData(
-                dataset, field_column_names=columns, covar_column_names=covar_columns
+                dataset,
+                field_column_names=field_column_names,
+                covar_column_names=covar_column_names,
             ),
             **kwargs,
         )

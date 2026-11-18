@@ -185,8 +185,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
               format, ``event`` must not be given.
 
             An optional ``entry`` column of floats holds left truncation values
-            (``0.`` if missing). Other columns are ignored, except covariates
-            selected with ``covar_columns``.
+            (``0.`` if missing).
         field_column_names : mapping of str to str, optional
             Column name of each lifetime field in ``dataset``, as
             ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
@@ -641,10 +640,12 @@ class Gompertz(LifetimeDistribution):
     @override
     def _init_params(
         self,
-        data: LifetimeData,
+        dataset: LifetimeData,
     ) -> onp.Array1D[np.float64]:
         # flatten in case of 2D time
-        time = np.append(data.complete_time.flatten(), data.censored_time.flatten())
+        time = np.append(
+            dataset.complete_time.flatten(), dataset.censored_time.flatten()
+        )
         nb_params = self.get_params().size
         param0 = np.empty(nb_params, dtype=np.float64)
         rate = np.pi / (np.sqrt(6) * np.std(time))

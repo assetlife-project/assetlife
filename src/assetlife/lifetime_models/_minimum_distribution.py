@@ -127,27 +127,82 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         return self.baseline.get_params_bounds()
 
     @override
-    def _init_params(self, data: LifetimeData) -> onp.Array1D[np.float64]:
-        return self.baseline._init_params(data)  # ruff: ignore[private-member-access]
+    def _init_params(self, dataset: LifetimeData) -> onp.Array1D[np.float64]:
+        return self.baseline._init_params(dataset)  # ruff: ignore[private-member-access]
 
     @override
     def _init_likelihood(
         self,
-        data: LifetimeData,
+        dataset: LifetimeData,
         **kwargs: Any,
     ) -> LifetimeLikelihood:
-        likelihood = self.baseline._init_likelihood(data, **kwargs)  # ruff: ignore[private-member-access]
+        likelihood = self.baseline._init_likelihood(dataset, **kwargs)  # ruff: ignore[private-member-access]
         likelihood.model = MinimumDistribution(likelihood.model, self.n)
         return likelihood
 
     def fit(
         self,
         data: IntoDataFrame,
-        covar_columns: Sequence[str] = (),
+        covar_column_names: Sequence[str] = (),
         *,
-        columns: Mapping[str, str] | None = None,
+        field_column_names: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
+        """
+        Estimate the model parameters from lifetime data.
+
+        Parameters
+        ----------
+        dataset : DataFrame
+            Lifetime observations, one row per observation, as any eager dataframe
+            supported by narwhals (polars, pandas, pyarrow...). Lifetimes are given
+            either as:
+
+            - a ``time`` column of floats: complete or right-censored lifetimes. An
+              optional ``event`` column of booleans tells whether each lifetime is a
+              failure (``True``) or right-censored (``False``). If ``event`` is
+              missing, all lifetimes are complete.
+            - ``time_inf`` and ``time_sup`` columns of floats: interval-censored
+              lifetimes ``[time_inf, time_sup]``. A complete lifetime is encoded as
+              ``time_inf == time_sup``, a right-censored lifetime as
+              ``[x, np.inf]`` and a left-censored lifetime as ``[0., x]``. In this
+              format, ``event`` must not be given.
+
+            An optional ``entry`` column of floats holds left truncation values
+            (``0.`` if missing). Other columns are ignored, except covariates
+            selected with ``covar_columns``.
+        covar_column_names : sequence of str, default ()
+            Names of the covariate columns in ``dataset``, used if ``baseline``
+            is a  regression model. Each covariate must be a column of floats.
+        field_column_names : mapping of str to str, optional
+            Column name of each lifetime field in ``dataset``, as
+            ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
+            Fields are the lifetime variables ``"time"``, ``"time_inf"``,
+            ``"time_sup"``, ``"event"`` and ``"entry"``. Fields not given are looked
+            up under their own name.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+            which searches for the parameters minimizing the negative
+            log-likelihood.
+
+            The additional keyword ``covariance_method`` controls how the
+            covariance matrix of the estimated parameters is computed. Allowed
+            values are ``"cs"``, ``"2point"``, ``"exact"`` or ``False``. If
+            ``False``, the covariance is not estimated. If ``"exact"``, ``hess``
+            must also be provided. If not set, the model's default method is
+            used.
+
+        Returns
+        -------
+        self : MinimumDistribution
+            The fitted model. Estimated parameters are set in place.
+        """
         return self._fit(
-            LifetimeData(data, columns=columns, covar_columns=covar_columns), **kwargs
+            LifetimeData(
+                data,
+                field_column_names=field_column_names,
+                covar_column_names=covar_column_names,
+            ),
+            **kwargs,
         )
