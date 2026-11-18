@@ -181,8 +181,8 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
             - ``time_inf`` and ``time_sup`` columns of floats: interval-censored
               lifetimes ``[time_inf, time_sup]``. A complete lifetime is encoded as
               ``time_inf == time_sup``, a right-censored lifetime as
-              ``[x, np.inf]`` and a left-censored lifetime as ``[0., x]``. In this
-              format, ``event`` must not be given.
+              ``[x, np.inf]`` and a left-censored lifetime as ``[entry, x]``. In
+              this format, ``event`` must not be given.
 
             An optional ``entry`` column of floats holds left truncation values
             (``0.`` if missing).

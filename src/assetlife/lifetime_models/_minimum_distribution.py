@@ -142,7 +142,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
 
     def fit(
         self,
-        data: IntoDataFrame,
+        dataset: IntoDataFrame,
         covar_column_names: Sequence[str] = (),
         *,
         field_column_names: Mapping[str, str] | None = None,
@@ -165,12 +165,12 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
             - ``time_inf`` and ``time_sup`` columns of floats: interval-censored
               lifetimes ``[time_inf, time_sup]``. A complete lifetime is encoded as
               ``time_inf == time_sup``, a right-censored lifetime as
-              ``[x, np.inf]`` and a left-censored lifetime as ``[0., x]``. In this
-              format, ``event`` must not be given.
+              ``[x, np.inf]`` and a left-censored lifetime as ``[entry, x]``. In
+              this format, ``event`` must not be given.
 
             An optional ``entry`` column of floats holds left truncation values
             (``0.`` if missing). Other columns are ignored, except covariates
-            selected with ``covar_columns``.
+            selected with ``covar_columns_names``.
         covar_column_names : sequence of str, default ()
             Names of the covariate columns in ``dataset``, used if ``baseline``
             is a  regression model. Each covariate must be a column of floats.
@@ -200,7 +200,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         """
         return self._fit(
             LifetimeData(
-                data,
+                dataset,
                 field_column_names=field_column_names,
                 covar_column_names=covar_column_names,
             ),
