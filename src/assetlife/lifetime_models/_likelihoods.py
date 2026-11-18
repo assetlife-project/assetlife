@@ -62,66 +62,6 @@ class LifetimeData:
         If several fields map to the same column, if lifetimes are not given
         either as ``time`` or as both ``time_inf`` and ``time_sup``, or if
         ``event`` is given with interval-censored lifetimes.
-
-    Examples
-    --------
-    Right-censored and left-truncated lifetimes:
-
-    >>> import numpy as np
-    >>> import polars as pl
-    >>> from assetlife.lifetime_models._base import LifetimeData
-    >>> df = pl.DataFrame({
-    ...     "time": [1.0, 2.0, 3.0, 4.0],
-    ...     "event": [True, False, True, True],
-    ...     "entry": [0.0, 0.0, 1.5, 0.0],
-    ... })
-    >>> data = LifetimeData(df)
-    >>> data.nb_observations
-    4
-    >>> print(data.complete_time.ravel())
-    [1. 3. 4.]
-    >>> print(data.censored_time.ravel())
-    [2.]
-    >>> print(data.left_truncations.ravel())
-    [1.5]
-
-    Columns with other names are mapped with ``columns``:
-
-    >>> df = pl.DataFrame({"duration": [5.0, 8.0], "failed": [True, False]})
-    >>> data = LifetimeData(df, columns={"time": "duration", "event": "failed"})
-    >>> print(data.complete_time.ravel())
-    [5.]
-    >>> print(data.censored_time.ravel())
-    [8.]
-
-    Interval-censored lifetimes:
-
-    >>> df = pl.DataFrame({
-    ...     "time_inf": [2.0, 0.0, 4.0],
-    ...     "time_sup": [2.0, 3.0, np.inf],
-    ... })
-    >>> data = LifetimeData(df)
-    >>> print(data.complete_time.ravel())
-    [2.]
-    >>> print(data.censored_time)
-    [[ 0.  3.]
-     [ 4. inf]]
-
-    Covariates for regression models:
-
-    >>> df = pl.DataFrame({
-    ...     "time": [1.0, 2.0, 3.0],
-    ...     "event": [True, False, True],
-    ...     "pHCl": [0.5, 0.7, 0.9],
-    ...     "HNO3": [1.0, 1.1, 1.2],
-    ... })
-    >>> data = LifetimeData(df, covar_columns=["pHCl", "HNO3"])
-    >>> len(data.complete_time_covars)
-    2
-    >>> print(data.complete_time_covars[0].ravel())
-    [0.5 0.9]
-    >>> print(data.censored_time_covars[1].ravel())
-    [1.1]
     """
 
     nb_observations: int
