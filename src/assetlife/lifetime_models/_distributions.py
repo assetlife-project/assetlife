@@ -161,7 +161,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         self,
         dataset: IntoDataFrame,
         *,
-        columns: Mapping[str, str] | None = None,
+        field_column_names: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -187,11 +187,12 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
             An optional ``entry`` column of floats holds left truncation values
             (``0.`` if missing). Other columns are ignored, except covariates
             selected with ``covar_columns``.
-        columns : mapping of str to str, optional
-            Column names of the lifetime fields in ``dataset``, as
+        field_column_names : mapping of str to str, optional
+            Column name of each lifetime field in ``dataset``, as
             ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
-            Valid fields are ``"time"``, ``"time_inf"``, ``"time_sup"``, ``"event"``
-            and ``"entry"``. Fields not given are looked up under their own name.
+            Fields are the lifetime variables ``"time"``, ``"time_inf"``,
+            ``"time_sup"``, ``"event"`` and ``"entry"``. Fields not given are looked
+            up under their own name.
         **kwargs
             Extra keyword arguments passed to `scipy.optimize.minimize
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
@@ -210,7 +211,9 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         self : ParametricLifetimeDistribution
             The fitted model. Estimated parameters are set in place.
         """
-        return self._fit(LifetimeData(dataset, columns=columns), **kwargs)
+        return self._fit(
+            LifetimeData(dataset, field_column_names=field_column_names), **kwargs
+        )
 
 
 @final

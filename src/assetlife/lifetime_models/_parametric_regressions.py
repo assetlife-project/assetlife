@@ -280,10 +280,10 @@ class ParametricLifetimeRegression(
     @override
     def _init_params(
         self,
-        data: LifetimeData,
+        dataset: LifetimeData,
     ) -> onp.Array1D[np.float64]:
         param0 = np.zeros_like(self.get_params(), dtype=np.float64)
-        param0[-self.baseline.get_params().size :] = self.baseline._init_params(data)  # ruff: ignore[private-member-access]
+        param0[-self.baseline.get_params().size :] = self.baseline._init_params(dataset)  # ruff: ignore[private-member-access]
         return param0
 
     @override
@@ -346,14 +346,15 @@ class ParametricLifetimeRegression(
             An optional ``entry`` column of floats holds left truncation values
             (``0.`` if missing). Other columns are ignored, except covariates
             selected with ``covar_columns``.
-        covar_columns : sequence of str, default ()
-            Names of the covariate columns in ``dataset``, used by regression
-            models. Each covariate must be a column of floats.
-        columns : mapping of str to str, optional
-            Column names of the lifetime fields in ``dataset``, as
+        covar_column_names : sequence of str
+            Names of the covariate columns in ``dataset``. Each covariate must
+            be a column of floats.
+        field_column_names : mapping of str to str, optional
+            Column name of each lifetime field in ``dataset``, as
             ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
-            Valid fields are ``"time"``, ``"time_inf"``, ``"time_sup"``, ``"event"``
-            and ``"entry"``. Fields not given are looked up under their own name.
+            Fields are the lifetime variables ``"time"``, ``"time_inf"``,
+            ``"time_sup"``, ``"event"`` and ``"entry"``. Fields not given are looked
+            up under their own name.
         **kwargs
             Extra keyword arguments passed to `scipy.optimize.minimize
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
@@ -373,7 +374,9 @@ class ParametricLifetimeRegression(
             The fitted model. Estimated parameters are set in place.
         """
         return self._fit(
-            LifetimeData(dataset, columns=columns, covar_columns=covar_columns),
+            LifetimeData(
+                dataset, field_column_names=columns, covar_column_names=covar_columns
+            ),
             **kwargs,
         )
 
