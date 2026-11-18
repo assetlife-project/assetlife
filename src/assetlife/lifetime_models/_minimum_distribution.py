@@ -170,7 +170,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
 
             An optional ``entry`` column of floats holds left truncation values
             (``0.`` if missing). Other columns are ignored, except covariates
-            selected with ``covar_columns_names``.
+            selected with ``covar_column_names``.
         covar_column_names : sequence of str, default ()
             Names of the covariate columns in ``dataset``, used if ``baseline``
             is a  regression model. Each covariate must be a column of floats.
