@@ -5,7 +5,8 @@ import numpy as np
 import optype.numpy as onp
 
 from ._parametric_regressions import LinearCovarEffect
-from assetlife.base import FitConfig, FittingResults, MaximumLikelihoodOptimizer
+from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
+from assetlife.base import FittingResults
 from assetlife.typing import CoercibleFloat64_1D
 
 

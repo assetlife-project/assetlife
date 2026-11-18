@@ -1160,7 +1160,7 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         ) * self.hf(time, *args)
 
     @abstractmethod
-    def _init_params(self, data: LifetimeData) -> onp.Array1D[np.float64]:
+    def _init_params(self, dataset: LifetimeData) -> onp.Array1D[np.float64]:
         """Init params with statistical heuristics from time data.
 
         Parameters:
@@ -1174,7 +1174,9 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         """
 
     @abstractmethod
-    def _init_likelihood(self, data: LifetimeData, **kwargs: Any) -> LifetimeLikelihood:
+    def _init_likelihood(
+        self, dataset: LifetimeData, **kwargs: Any
+    ) -> LifetimeLikelihood:
         r"""
         Initialize the lifetime likelihood used to fit the parameters.
 
@@ -1226,8 +1228,8 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         out : LifetimeLikelihood instance
         """
 
-    def _fit(self, data: LifetimeData, **kwargs: Any) -> Self:
-        likelihood = self._init_likelihood(data, **kwargs)
+    def _fit(self, dataset: LifetimeData, **kwargs: Any) -> Self:
+        likelihood = self._init_likelihood(dataset, **kwargs)
         self.fitting_results = likelihood.optimize()
         self.set_params(self.fitting_results.optimal_params)
         return self

@@ -27,7 +27,7 @@ from ._distributions import (
 )
 from ._likelihoods import LifetimeData, LifetimeLikelihood
 from assetlife._optimization import FitConfig
-from assetlife.base import FittingResults, ParametricModel
+from assetlife.base import ParametricModel
 from assetlife.typing import CoercibleFloat64_ND
 
 if TYPE_CHECKING:
@@ -124,7 +124,6 @@ class ParametricLifetimeRegression(
 
     baseline: LifetimeDistribution
     covar_effect: LinearCovarEffect
-    fitting_results: FittingResults | None
 
     def __init__(
         self,
@@ -290,13 +289,13 @@ class ParametricLifetimeRegression(
     @override
     def _init_likelihood(
         self,
-        data: LifetimeData,
+        dataset: LifetimeData,
         **kwargs: Any,
     ) -> LifetimeLikelihood:
         fresh_regression = type(self)(
-            type(self.baseline)(), coefficients=(0.0,) * data.nb_covars
+            type(self.baseline)(), coefficients=(0.0,) * dataset.nb_covars
         )  # init new regression object with appropriate number of covar
-        x0 = kwargs.get("x0", fresh_regression._init_params(data))  # ruff: ignore[private-member-access]
+        x0 = kwargs.get("x0", fresh_regression._init_params(dataset))  # ruff: ignore[private-member-access]
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
@@ -307,18 +306,18 @@ class ParametricLifetimeRegression(
             "covariance_method",
             "2point" if isinstance(fresh_regression.baseline, Gamma) else "cs",
         )
-        return LifetimeLikelihood(fresh_regression, data, config)
+        return LifetimeLikelihood(fresh_regression, dataset, config)
 
     @override
-    def _fit(self, data: LifetimeData, **kwargs: Any) -> Self:
+    def _fit(self, dataset: LifetimeData, **kwargs: Any) -> Self:
         self.covar_effect.set_params(
-            [0.0] * len(data.complete_time_covars)
+            [0.0] * len(dataset.complete_time_covars)
         )  # resize coefficients
-        return super()._fit(data, **kwargs)
+        return super()._fit(dataset, **kwargs)
 
     def fit(
         self,
-        data: IntoDataFrame,
+        dataset: IntoDataFrame,
         covar_columns: Sequence[str],
         *,
         columns: Mapping[str, str] | None = None,
@@ -329,27 +328,32 @@ class ParametricLifetimeRegression(
 
         Parameters
         ----------
-        time : ndarray of shape (n_samples,) or (n_samples, 2)
-            Observed lifetimes.
+        dataset : DataFrame
+            Lifetime observations, one row per observation, as any eager dataframe
+            supported by narwhals (polars, pandas, pyarrow...). Lifetimes are given
+            either as:
 
-            - If 1D, each value is either a complete or a right-censored
-              lifetime. Use ``event`` to indicate which values are
-              right-censored.
-            - If 2D, each row encodes a lifetime as an interval
-              ``[lower, upper]``. A complete lifetime is encoded as ``[x, x]``,
-              a right-censored lifetime as ``[x, np.inf]``, a left-censored
-              lifetime as ``[0., x]``, and an interval-censored lifetime as
-              ``[a, b]``. In this format, ``event`` is ignored.
-        covar : ndarray of shape (n_samples, n_covariates) or sequence of 1D ndarray
-            Covariate values for each sample. If a sequence of 1D arrays is
-            given, each array holds the values of one covariate.
-        event : ndarray of shape (n_samples,) of bool, default None
-            Event indicators for 1D ``time``: ``True`` if the lifetime is
-            complete (failure observed), ``False`` if it is right-censored.
-            If None, all lifetimes are considered complete.
-        entry : ndarray of shape (n_samples,), default None
-            Left-truncation times, i.e. the age at which each sample entered
-            observation. If None, no left truncation is applied.
+            - a ``time`` column of floats: complete or right-censored lifetimes. An
+              optional ``event`` column of booleans tells whether each lifetime is a
+              failure (``True``) or right-censored (``False``). If ``event`` is
+              missing, all lifetimes are complete.
+            - ``time_inf`` and ``time_sup`` columns of floats: interval-censored
+              lifetimes ``[time_inf, time_sup]``. A complete lifetime is encoded as
+              ``time_inf == time_sup``, a right-censored lifetime as
+              ``[x, np.inf]`` and a left-censored lifetime as ``[0., x]``. In this
+              format, ``event`` must not be given.
+
+            An optional ``entry`` column of floats holds left truncation values
+            (``0.`` if missing). Other columns are ignored, except covariates
+            selected with ``covar_columns``.
+        covar_columns : sequence of str, default ()
+            Names of the covariate columns in ``dataset``, used by regression
+            models. Each covariate must be a column of floats.
+        columns : mapping of str to str, optional
+            Column names of the lifetime fields in ``dataset``, as
+            ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
+            Valid fields are ``"time"``, ``"time_inf"``, ``"time_sup"``, ``"event"``
+            and ``"entry"``. Fields not given are looked up under their own name.
         **kwargs
             Extra keyword arguments passed to `scipy.optimize.minimize
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
@@ -369,7 +373,8 @@ class ParametricLifetimeRegression(
             The fitted model. Estimated parameters are set in place.
         """
         return self._fit(
-            LifetimeData(data, columns=columns, covar_columns=covar_columns), **kwargs
+            LifetimeData(dataset, columns=columns, covar_columns=covar_columns),
+            **kwargs,
         )
 
 
