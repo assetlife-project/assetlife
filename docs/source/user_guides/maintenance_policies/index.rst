@@ -1,9 +1,12 @@
 Maintenance policies
 ====================
 
-A **maintenance policy** turns rewards into a decision. Every policy is built from a lifetime 
-model and exposes the same four cost methods. They are the methods of the underlying renewal 
-reward process, renamed:
+A **maintenance policy** turns rewards into a decision. Every policy is built from a model 
+and exposes the same four cost methods. They are the methods of the underlying renewal reward 
+process but from two vocabularies. A renewal reward process uses the terms of probability 
+theory while a policy uses the financial terms. Each policy also comes in two variants: 
+a *renewal* one, where assets are replaced and a *one-cycle* one, which stops at the first
+replacement.
 
 .. list-table::
     :header-rows: 1
@@ -20,12 +23,7 @@ reward process, renamed:
     * - ``asymptotic_expected_equivalent_annual_cost``
       - ``asymptotic_expected_equivalent_annual_worth``
 
-Each policy also comes in two variants: a *renewal* one, where assets are replaced over a timeline or
-indefinitely, to plan a fleet over the long run, and a *one-cycle* one, which stops at the first
-replacement, to decide about the assets currently in service.
-
 .. toctree::
     :maxdepth: 1
 
-    run_to_failure
-    age_replacement
+    unique_events_policies
