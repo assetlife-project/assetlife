@@ -17,7 +17,9 @@ from assetlife.lifetime_models._parametric_regressions import (
 )
 
 if TYPE_CHECKING:
-    import pandas as pd
+    from collections.abc import Sequence
+
+    from narwhals.typing import IntoDataFrame
 
     from assetlife.lifetime_models import (
         ParametricLifetimeModel,
@@ -95,18 +97,9 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         """
         return self.lifetime_model.chf(time, *args)
 
-    def init_likelihood(
-        self,
-        failures: pd.DataFrame,
-        assets: pd.DataFrame,
-        covariates: list[str] | None = None,
-        partial_observations: pd.DataFrame | None = None,
-        **kwargs: Any,
-    ) -> NHPPLikelihood:
-        data = NHPPData(failures, assets, covariates, partial_observations)
-
+    def _init_likelihood(self, data: NHPPData, **kwargs: Any) -> NHPPLikelihood:
         if isinstance(self.lifetime_model, LifetimeDistribution):
-            if (covariates is not None) and len(covariates) > 0:
+            if data.nb_covars > 0:
                 msg = "No covariates can be given for fit when using a distribution."
                 raise ValueError(msg)
             fresh_model = type(self.lifetime_model)()
@@ -115,12 +108,12 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
                 "2point" if isinstance(fresh_model, Gamma) else "cs",
             )
         elif isinstance(self.lifetime_model, ParametricLifetimeRegression):
-            if (covariates is None) or len(covariates) == 0:
+            if data.nb_covars == 0:
                 msg = "Covariates must be given for fit when using a regression."
                 raise ValueError(msg)
             fresh_model = type(self.lifetime_model)(
                 type(self.lifetime_model.baseline)(),
-                coefficients=(0.0,) * len(covariates),
+                coefficients=(0.0,) * data.nb_covars,
             )
             covariance_method = kwargs.get(
                 "covariance_method",
@@ -134,7 +127,10 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
             )
             raise TypeError(msg)
 
-        x0 = kwargs.get("x0", fresh_model._init_params(data.failures_time))  # ruff: ignore[private-member-access]
+        x0 = kwargs.get(
+            "x0",
+            fresh_model._init_params(data.failures_lifetime_data),  # ruff: ignore[private-member-access]
+        )
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
             "bounds", fresh_model.get_params_bounds()
@@ -143,39 +139,69 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
         return NHPPLikelihood(fresh_model, data, config)
 
+    def _fit(self, data: NHPPData, **kwargs: Any) -> Self:
+        likelihood = self._init_likelihood(data, **kwargs)
+        fitting_results = likelihood.optimize()
+        if isinstance(self.lifetime_model, ParametricLifetimeRegression):
+            self.lifetime_model.covar_effect.set_params(
+                [0.0] * data.nb_covars
+            )  # resize coefficients
+        self.set_params(fitting_results.optimal_params)
+        self.fitting_results = fitting_results
+        return self
+
     def fit(
         self,
-        failures: pd.DataFrame,
-        assets: pd.DataFrame,
-        covariates: list[str] | None = None,
-        partial_observations: pd.DataFrame | None = None,
+        failures: IntoDataFrame,
+        assets: IntoDataFrame,
+        covar_column_names: Sequence[str] = (),
+        *,
+        partial_observations: IntoDataFrame | None = None,
         **kwargs: Any,
     ) -> Self:
-        """Fit the NHPP parametric model with failure observation history.
+        """Estimate the process parameters from failure observation history.
 
         Parameters
         ----------
-        failures : pd.DataFrame
-            Table of failure observed times per asset
-        assets : pd.DataFrame
-            Table of assets properties, including observation window and possible
-            covariates
-        covariates : list[str] | None, optional
-            List of columns of the asset table to use as covariates. Defaults to None.
-        partial_observations : pd.DataFrame | None, optional
-            Optional partial observations, a number of events per time window.
-            Defaults to None.
+        failures : DataFrame
+            Failure times, one row per failure, as any eager dataframe supported
+            by narwhals (polars, pandas, pyarrow...). Columns are ``id``, the
+            asset id, and ``time``, the failure time as float. Each id must be
+            an asset id of ``assets``. Other columns are ignored.
+        assets : DataFrame
+            Assets, one row per asset, as any eager dataframe. Columns are
+            ``id``, the unique asset id, and ``start`` and ``end``, the bounds of
+            the observation window of the asset as floats. Assets may have no
+            failure. Other columns are ignored, except covariates selected with
+            ``covar_column_names``.
+        covar_column_names : sequence of str, default ()
+            Names of the covariate columns in ``assets``. Each covariate must be
+            a column of floats. Covariates are required if the lifetime model is
+            a regression, and forbidden if it is a distribution.
+        partial_observations : DataFrame, optional
+            Numbers of failures observed per time window, without failure times,
+            as any eager dataframe. Columns are ``id``, the asset id, ``start``
+            and ``end``, the bounds of the time window as floats, and ``count``,
+            the number of failures observed in the window. Each id must be an
+            asset id of ``assets`` and each window must be within the
+            observation window of its asset. Other columns are ignored.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+            which searches for the parameters minimizing the negative
+            log-likelihood.
+
+            The additional keyword ``covariance_method`` controls how the
+            covariance matrix of the estimated parameters is computed. Allowed
+            values are ``"cs"``, ``"2point"``, ``"exact"`` or ``False``. If
+            ``False``, the covariance is not estimated. If ``"exact"``, ``hess``
+            must also be provided. If not set, the model's default method is
+            used.
 
         Returns
         -------
-        Self
-            The fitted process.
-
-        Raises
-        ------
-        ValueError
-            If covariates are given with a distribution, or missing with a
-            regression.
+        self : NonHomogeneousPoissonProcess
+            The fitted process. Estimated parameters are set in place.
 
         Examples
         --------
@@ -193,31 +219,26 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         1   2    0.0  12.0      1.2       20
         2   3    0.0  11.5      0.8       15
         3   4    0.0   8.0      2.0       30
-        >>> covariates
-        ['covar_1', 'covar_2']
         >>> partial_observations
             id  start  end  count
         0   4    0.0  4.0      1
         1   4    4.0  8.0      2
+        >>> nhpp.fit(
+        ...     failures,
+        ...     assets,
+        ...     ["covar_1", "covar_2"],
+        ...     partial_observations=partial_observations,
+        ... )
         """
-        optimizer = self.init_likelihood(
-            failures,
-            assets,
-            covariates,
-            partial_observations,
+        return self._fit(
+            NHPPData(
+                failures,
+                assets,
+                covar_column_names=covar_column_names,
+                partial_observations=partial_observations,
+            ),
             **kwargs,
         )
-        fitting_results = optimizer.optimize()
-        if isinstance(self.lifetime_model, ParametricLifetimeRegression):
-            if (covariates is None) or len(covariates) == 0:
-                msg = "Covariates must be given for fit when using a regression."
-                raise ValueError(msg)
-            self.lifetime_model.covar_effect.set_params(
-                [0.0] * len(covariates)
-            )  # modify nb coef inplace
-        self.set_params(fitting_results.optimal_params)
-        self.fitting_results = fitting_results
-        return self
 
     def freeze(self, *args: *CovarTs) -> FrozenNonHomogeneousPoissonProcess[*CovarTs]:
         """
