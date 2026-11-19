@@ -120,7 +120,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         time: CoercibleFloat64_ND,
         *args: *CovarTs,
     ) -> ArrayND[np.float64]:
-        return self.n * self.baseline.jac_chf(time, *args)
+        return self.n * self.baseline.jac_hf(time, *args)
 
     @override
     def get_params_bounds(self) -> Bounds:
