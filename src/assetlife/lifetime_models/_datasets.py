@@ -366,3 +366,130 @@ class CoxData:
         self.ordered_event_covar = tuple(
             covar[complete][ordered_event_index] for covar in self.covar
         )
+
+
+def read_complete_time(
+    dataset: IntoDataFrame,
+    *,
+    field_column_names: Mapping[str, str] | None = None,
+) -> onp.Array1D[np.float64]:
+    """Observed times of ``dataset``, all taken as complete lifetimes.
+
+    Only the ``time`` column is read: ``event``, ``entry`` and other columns
+    are ignored.
+
+    Parameters
+    ----------
+    dataset : DataFrame
+        Lifetime observations, one row per observation, as any eager dataframe
+        supported by narwhals (polars, pandas, pyarrow...), with a ``time``
+        column of floats.
+    field_column_names : mapping of str to str, optional
+        Column name of the ``"time"`` field in ``dataset``, as
+        ``{"time": column_name}``. If not given, ``time`` is looked up under
+        its own name.
+
+    Returns
+    -------
+    np.ndarray
+        Observed times, of shape ``(n,)``.
+
+    Notes
+    -----
+    A TypeError is raised if ``dataset`` is not an eager dataframe or ``time``
+    is not numeric, and a ValueError if ``time`` is missing or has missing
+    values, if ``dataset`` is empty, or if ``time`` values are not finite and
+    positive.
+    """
+    df = to_eager_df(dataset)
+    fields = field_column_names or {}
+    df = df.rename({col: f for f, col in fields.items() if col in df.columns})
+    check_columns_exist(df, ["time"])
+    check_not_empty(df)
+    check_numeric(df, ["time"])
+    check_no_missing_values(df, ["time"])
+    return _read_time(df, np.zeros((len(df), 1), dtype=np.float64)).ravel()
+
+
+class NonParametricData:
+    """Observation schema for non-parametric lifetime models.
+
+    Numbers of observations at risk and of failures at each distinct observed
+    time, used by the Kaplan-Meier and Nelson-Aalen estimators.
+
+    Parameters
+    ----------
+    dataset : DataFrame
+        Lifetime observations, one row per observation, as any eager dataframe
+        supported by narwhals (polars, pandas, pyarrow...). Lifetimes are
+        complete or right-censored, given as a ``time`` column of floats. An
+        optional ``event`` column of booleans tells whether each lifetime is a
+        failure (``True``) or right-censored (``False``). If ``event`` is
+        missing, all lifetimes are complete. An optional ``entry`` column of
+        floats holds left truncation values (``0.`` if missing). Other columns
+        are ignored.
+    field_column_names : mapping of str to str, optional
+        Column name of each lifetime field in ``dataset``, as
+        ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
+        Fields are the lifetime variables ``"time"``, ``"event"`` and
+        ``"entry"``. Fields not given are looked up under their own name.
+
+    Raises
+    ------
+    TypeError
+        If ``dataset`` is not an eager dataframe or a used column, except
+        ``event``, is not numeric.
+    ValueError
+        If a used column is missing or has missing values, if ``dataset`` is
+        empty, or if values are invalid: ``entry`` must be finite and
+        non-negative, ``event`` must be 0 or 1 and ``time`` must be finite and
+        greater than ``entry``.
+
+    Attributes
+    ----------
+    nb_observations : int
+        Number of observations.
+    timeline : np.ndarray
+        Sorted distinct observed times, failures and censorings, of shape
+        ``(m,)``.
+    nb_at_risk : np.ndarray
+        Number of observations at risk at each time ``t`` of the timeline, i.e.
+        such that ``entry < t <= time``, of shape ``(m,)``.
+    nb_failures : np.ndarray
+        Number of failures at each time of the timeline, of shape ``(m,)``.
+    """
+
+    nb_observations: int
+    timeline: onp.Array1D[np.float64]
+    nb_at_risk: onp.Array1D[np.int64]
+    nb_failures: onp.Array1D[np.int64]
+
+    def __init__(
+        self,
+        dataset: IntoDataFrame,
+        *,
+        field_column_names: Mapping[str, str] | None = None,
+    ) -> None:
+        df = to_eager_df(dataset)
+        fields = field_column_names or {}
+        df = df.rename({col: f for f, col in fields.items() if col in df.columns})
+        columns = ["time", *(["entry"] if "entry" in df.columns else [])]
+        check_columns_exist(df, columns)
+        check_not_empty(df)
+        check_numeric(df, columns)
+        check_no_missing_values(df, columns)
+
+        entry_column = _read_entry(df)
+        time = _read_time(df, entry_column).ravel()
+        entry = entry_column.ravel()
+        complete = _read_event(df)
+        self.nb_observations = len(df)
+
+        self.timeline, timeline_index = np.unique(time, return_inverse=True)
+        # entry < t <= time: (time >= t) minus (entry >= t), as entry < time
+        self.nb_at_risk = np.searchsorted(
+            np.sort(entry), self.timeline, side="left"
+        ) - np.searchsorted(np.sort(time), self.timeline, side="left")
+        self.nb_failures = np.bincount(
+            timeline_index, weights=complete, minlength=self.timeline.size
+        ).astype(np.int64)
