@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self, override
 
-from ._likelihoods import NHPPData, NHPPLikelihood
+from ._datasets import NHPPData
+from ._likelihoods import NHPPLikelihood
 from assetlife._optimization import FitConfig
 from assetlife.base import FittingResults, ParametricModel
 from assetlife.lifetime_models._distributions import (

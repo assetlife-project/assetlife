@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple, final, override
+from typing import TYPE_CHECKING, final, override
 
 import numpy as np
 
+from ._datasets import NHPPData
 from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,
@@ -14,76 +15,6 @@ from assetlife.typing import (
 
 if TYPE_CHECKING:
     import optype.numpy as onp
-    import pandas as pd
-
-
-class PartialObservations(NamedTuple):
-    """Numbers of events observed per time window, with their covariates."""
-
-    failures_count: onp.Array1D[np.float64]
-    start: onp.Array1D[np.float64]
-    end: onp.Array1D[np.float64]
-    covars: tuple[onp.Array1D[np.float64], ...]
-
-
-class NHPPData:
-    """NHPP data container for NHPPLikelihood."""
-
-    failures_time: onp.Array1D[np.float64]
-    failures_covars: tuple[onp.Array1D[np.float64], ...]
-    observations_start: onp.Array1D[np.float64]
-    observations_end: onp.Array1D[np.float64]
-    observations_covars: tuple[onp.Array1D[np.float64], ...]
-    covariates: list[str]
-    partial_observations: PartialObservations | None
-
-    def __init__(
-        self,
-        failures: pd.DataFrame,
-        assets: pd.DataFrame,
-        covariates: list[str] | None = None,
-        partial_observations: pd.DataFrame | None = None,
-    ) -> None:
-        if covariates is None:
-            covariates = []
-        self.covariates = covariates
-
-        assets_covariates = assets[["id", *self.covariates]]
-
-        # Get covariates for each failure time, using asset id as primary key
-        failures_merged = failures.merge(assets_covariates, how="left", on="id")
-        self.failures_time = failures_merged["time"].to_numpy(dtype=np.float64)
-        self.failures_covars = tuple(
-            failures_merged[covar].to_numpy(dtype=np.float64)
-            for covar in self.covariates
-        )
-
-        # Same for observation periods
-        self.observations_start = assets["start"].to_numpy(dtype=np.float64)
-        self.observations_end = assets["end"].to_numpy(dtype=np.float64)
-        self.observations_covars = tuple(
-            assets[covar].to_numpy(dtype=np.float64) for covar in self.covariates
-        )
-
-        # If partial observations are given, merge covariates with each time period
-        # and count
-        if partial_observations is None:
-            self.partial_observations = None
-        else:
-            partial_observations_merged = partial_observations.merge(
-                assets_covariates, how="left", on="id"
-            )
-            self.partial_observations = PartialObservations(
-                failures_count=partial_observations_merged["count"].to_numpy(
-                    dtype=np.float64
-                ),
-                start=partial_observations_merged["start"].to_numpy(dtype=np.float64),
-                end=partial_observations_merged["end"].to_numpy(dtype=np.float64),
-                covars=tuple(
-                    partial_observations_merged[covar].to_numpy(dtype=np.float64)
-                    for covar in self.covariates
-                ),
-            )
 
 
 @final
@@ -150,12 +81,31 @@ class NHPPLikelihood(
             )
         )
 
-    def _jac_observation_period_contrib(self) -> onp.ArrayND[np.float64]:
-        jac = self.model.jac_chf(
-            self.data.observations_end, *self.data.observations_covars
-        ) - self.model.jac_chf(
-            self.data.observations_start, *self.data.observations_covars
+    def _jac_chf(
+        self,
+        time: onp.Array1D[np.float64],
+        covars: tuple[onp.Array1D[np.float64], ...],
+    ) -> onp.Array2D[np.float64]:
+        # chf(0) = 0 whatever the parameters, so its jacobian is 0. It is not
+        # evaluated at 0, where some models give nan (e.g. log(0) * 0)
+        positive = time > 0
+        if positive.all():
+            return self.model.jac_chf(time, *covars)
+        nb_params = self.model.get_params().size
+        if not positive.any():
+            return np.zeros((nb_params, time.size), dtype=np.float64)
+        jac_positive = self.model.jac_chf(
+            time[positive], *(covar[positive] for covar in covars)
         )
+        # dtype of jac_positive may be complex (complex-step covariance)
+        jac = np.zeros((nb_params, time.size), dtype=jac_positive.dtype)
+        jac[:, positive] = jac_positive
+        return jac
+
+    def _jac_observation_period_contrib(self) -> onp.ArrayND[np.float64]:
+        jac = self._jac_chf(
+            self.data.observations_end, self.data.observations_covars
+        ) - self._jac_chf(self.data.observations_start, self.data.observations_covars)
         return np.sum(jac, axis=1)
 
     def _partial_observation_contrib(self) -> float:
@@ -174,8 +124,8 @@ class NHPPLikelihood(
         partial = self.data.partial_observations
         if partial is None:
             return np.zeros_like(self.model.get_params(), dtype=np.float64)
-        a = self.model.jac_chf(partial.end, *partial.covars) - self.model.jac_chf(
-            partial.start, *partial.covars
+        a = self._jac_chf(partial.end, partial.covars) - self._jac_chf(
+            partial.start, partial.covars
         )
         b = self.model.chf(partial.end, *partial.covars) - self.model.chf(
             partial.start, *partial.covars

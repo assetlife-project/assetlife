@@ -22,7 +22,8 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
-from ._likelihoods import LifetimeData, LifetimeLikelihood
+from ._datasets import LifetimeData
+from ._likelihoods import LifetimeLikelihood
 from assetlife._optimization import FitConfig
 from assetlife.quadratures import (
     laguerre_quadrature,

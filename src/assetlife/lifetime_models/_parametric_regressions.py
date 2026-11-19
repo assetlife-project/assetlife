@@ -21,11 +21,12 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
+from ._datasets import LifetimeData
 from ._distributions import (
     Gamma,
     LifetimeDistribution,
 )
-from ._likelihoods import LifetimeData, LifetimeLikelihood
+from ._likelihoods import LifetimeLikelihood
 from assetlife._optimization import FitConfig
 from assetlife.base import ParametricModel
 from assetlife.typing import CoercibleFloat64_ND
