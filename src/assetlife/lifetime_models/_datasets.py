@@ -84,29 +84,46 @@ def _read_covars(
     return covars
 
 
-def _read_right_censored(
+def _read_time(
     df: nw.DataFrame[Any], entry: _ColumnArray[np.float64]
-) -> tuple[_Mask, _ColumnArray[np.float64], _ColumnArray[np.float64]]:
-    """Mask of complete lifetimes, complete and right-censored times.
+) -> _ColumnArray[np.float64]:
+    """Observed times ``time`` of ``df``.
 
     Raises
     ------
     ValueError
-        If ``time`` is not finite and greater than ``entry``, or ``event`` is
-        not 0 or 1.
+        If ``time`` is not finite and greater than ``entry``.
     """
     time = _to_column_array(df, "time")
     if np.any(~np.isfinite(time) | (time <= entry)):
         msg = "'time' values must be finite and > 'entry'"
         raise ValueError(msg)
+    return time
+
+
+def _read_event(df: nw.DataFrame[Any]) -> _Mask:
+    """Mask of complete lifetimes, all True if ``event`` is not a column of ``df``.
+
+    Raises
+    ------
+    ValueError
+        If ``event`` is not 0 or 1.
+    """
     if "event" not in df.columns:
-        complete = np.ones(len(df), dtype=np.bool_)
-        return complete, time, time[~complete]
+        return np.ones(len(df), dtype=np.bool_)
     event = df.get_column("event").to_numpy()
     if np.any(~np.isin(event, (0, 1))):
         msg = "'event' values must be booleans or 0/1"
         raise ValueError(msg)
-    complete = event.astype(np.bool_)
+    return event.astype(np.bool_)
+
+
+def _read_right_censored(
+    df: nw.DataFrame[Any], entry: _ColumnArray[np.float64]
+) -> tuple[_Mask, _ColumnArray[np.float64], _ColumnArray[np.float64]]:
+    """Mask of complete lifetimes, complete and right-censored times."""
+    time = _read_time(df, entry)
+    complete = _read_event(df)
     return complete, time[complete], time[~complete]
 
 
@@ -232,3 +249,120 @@ class LifetimeData:
         self.complete_time_covars = tuple(covar[complete] for covar in covars)
         self.censored_time_covars = tuple(covar[~complete] for covar in covars)
         self.left_truncations_covars = tuple(covar[truncated] for covar in covars)
+
+
+class CoxData:
+    """Observation schema for the Cox semi-parametric regression.
+
+    Used to compute the partial likelihoods and the baseline estimations.
+
+    Parameters
+    ----------
+    dataset : DataFrame
+        Lifetime observations, one row per observation, as any eager dataframe
+        supported by narwhals (polars, pandas, pyarrow...). Lifetimes are
+        complete or right-censored, given as a ``time`` column of floats. An
+        optional ``event`` column of booleans tells whether each lifetime is a
+        failure (``True``) or right-censored (``False``). If ``event`` is
+        missing, all lifetimes are complete. An optional ``entry`` column of
+        floats holds left truncation values (``0.`` if missing). Other columns
+        are ignored, except covariates selected with ``covar_column_names``.
+    covar_column_names : sequence of str
+        Names of the covariate columns in ``dataset``. At least one covariate
+        is required. Each covariate must be a column of floats.
+    field_column_names : mapping of str to str, optional
+        Column name of each lifetime field in ``dataset``, as
+        ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
+        Fields are the lifetime variables ``"time"``, ``"event"`` and
+        ``"entry"``. Fields not given are looked up under their own name.
+
+    Raises
+    ------
+    TypeError
+        If ``dataset`` is not an eager dataframe or a used column, except
+        ``event``, is not numeric.
+    ValueError
+        If no covariate is given, if a used column is missing or has missing
+        values, if ``dataset`` is empty or has no failure, or if values are
+        invalid: ``entry`` must be finite and non-negative, ``event`` must be 0
+        or 1, ``time`` must be finite and greater than ``entry`` and covariates
+        must be finite.
+
+    Attributes
+    ----------
+    nb_observations : int
+        Number of observations.
+    nb_covars : int
+        Number of covariates.
+    covar : tuple of np.ndarray
+        Covariates of every observation, each of shape ``(n, 1)``.
+    ordered_event_time : np.ndarray
+        Sorted distinct failure times, of shape ``(m,)``.
+    event_count : np.ndarray
+        Number of failures at each ordered event time, of shape ``(m,)``.
+    risk_set : np.ndarray
+        Mask of observations at risk at each ordered event time
+        (``entry < t <= time``), of shape ``(m, n)``.
+    death_set : np.ndarray
+        Mask of observations failing at each ordered event time, of shape
+        ``(m, n)``.
+    ordered_event_covar : tuple of np.ndarray
+        Covariates of the first failure at each ordered event time, each of
+        shape ``(m, 1)``.
+    """
+
+    nb_observations: int
+    nb_covars: int
+    covar: tuple[_ColumnArray[np.float64], ...]
+    ordered_event_time: onp.Array1D[np.float64]
+    event_count: onp.Array1D[np.int64]
+    risk_set: onp.Array2D[np.bool_]
+    death_set: onp.Array2D[np.bool_]
+    ordered_event_covar: tuple[_ColumnArray[np.float64], ...]
+
+    def __init__(
+        self,
+        dataset: IntoDataFrame,
+        covar_column_names: Sequence[str],
+        *,
+        field_column_names: Mapping[str, str] | None = None,
+    ) -> None:
+        covar_names = list(covar_column_names)
+        if not covar_names:
+            msg = "At least one covariate is required"
+            raise ValueError(msg)
+        df = to_eager_df(dataset)
+        fields = field_column_names or {}
+        df = df.rename({col: f for f, col in fields.items() if col in df.columns})
+        columns = [
+            "time",
+            *(["entry"] if "entry" in df.columns else []),
+            *covar_names,
+        ]
+        check_columns_exist(df, columns)
+        check_not_empty(df)
+        check_numeric(df, columns)
+        check_no_missing_values(df, columns)
+
+        entry_column = _read_entry(df)
+        time = _read_time(df, entry_column).ravel()
+        entry = entry_column.ravel()
+        complete = _read_event(df)
+        if not complete.any():
+            msg = "At least one failure is required ('event' all False)"
+            raise ValueError(msg)
+        self.covar = _read_covars(df, covar_names)
+        self.nb_observations = len(df)
+        self.nb_covars = len(covar_names)
+
+        # sorted distinct failure times, index of their first occurrence and
+        # number of failures at each of them
+        self.ordered_event_time, ordered_event_index, self.event_count = np.unique(
+            time[complete], return_index=True, return_counts=True
+        )
+        event_time = self.ordered_event_time[:, None]
+        self.risk_set = (entry[None, :] < event_time) & (event_time <= time[None, :])
+        self.death_set = complete[None, :] & (time[None, :] == event_time)
+        self.ordered_event_covar = tuple(
+            covar[complete][ordered_event_index] for covar in self.covar
+        )
