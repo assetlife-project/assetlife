@@ -152,7 +152,7 @@ class ParametricModel:
         Notes
         -----
         ``set_params`` definition expects an array-like of floats. At runtime,
-        complex parameters might be setted temporarily to approximate fitted
+        complex parameters might be set temporarily to approximate fitted
         parameters covariance. This is contradictory to the given typing. At
         the moment, we don't see a better solution and we believe that this is
         actually a limitation of what can be expressed in the static typesystem.
@@ -178,9 +178,8 @@ class ParametricModel:
 
         Parameters
         ----------
-        path: str or Path
+        path : str or Path
             Pickle filepath.
-
         """
         with Path(path).open("wb") as f:
             pickle.dump(self, f)
@@ -192,8 +191,13 @@ class ParametricModel:
 
         Parameters
         ----------
-        path: str or Path
+        path : str or Path
             Pickle filepath.
+
+        Returns
+        -------
+        ParametricModel
+            The loaded model.
 
         Raises
         ------

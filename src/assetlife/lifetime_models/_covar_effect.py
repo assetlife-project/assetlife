@@ -15,13 +15,21 @@ if TYPE_CHECKING:
 
 
 class LinearCovarEffect(ParametricModel):
-    """
-    Covariates effect.
+    r"""
+    Linear covariates effect of lifetime regressions.
+
+    .. math::
+
+        g(\beta, x) = e^{\beta \cdot x}
+
+    where :math:`x` is a vector of covariates and :math:`\beta` the vector of
+    coefficients.
 
     Parameters
     ----------
-    coefficients : tuple of float, default is (None,)
-        Coefficients of the covariates effect.
+    *coefficients : float or None
+        Coefficients :math:`\beta`, one per covariate. None if unknown, e.g.
+        before fitting.
     """
 
     def __init__(self, *coefficients: float | None) -> None:
@@ -29,16 +37,18 @@ class LinearCovarEffect(ParametricModel):
 
     def g(self, *covar: CoercibleFloat64_ND) -> Float64_ND:
         """
-        Returns the covariates effect.
+        The covariates effect.
 
         Parameters
         ----------
-        covar : float or np.ndarray
-            The covariate values
+        *covar : float or np.ndarray
+            Covariate values, one per coefficient. They are broadcast together.
 
         Returns
         -------
         out : np.float64 or np.ndarray
+            Values of the covariates effect, of the broadcast shape of
+            ``covar``.
 
         Raises
         ------
@@ -58,16 +68,19 @@ class LinearCovarEffect(ParametricModel):
 
     def jac_g(self, *covar: CoercibleFloat64_ND) -> onp.ArrayND[np.float64]:
         """
-        Returns the jacobian of the covariates effect.
+        The jacobian of the covariates effect with respect to the coefficients.
 
         Parameters
         ----------
-        covar : float or np.ndarray
-            The covariate values
+        *covar : float or np.ndarray
+            Covariate values, one per coefficient. They are broadcast together.
 
         Returns
         -------
         out : np.ndarray
+            Derivatives with respect to each coefficient. The first dimension
+            holds the coefficients, the others are the broadcast shape of
+            ``covar``.
         """
         g = self.g(*covar)
         broadcasted_covar = np.broadcast_arrays(*covar)

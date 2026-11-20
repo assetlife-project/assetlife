@@ -1,3 +1,5 @@
+"""Likelihoods for stochastic processes."""
+
 from __future__ import annotations
 
 import copy
@@ -24,6 +26,30 @@ class NHPPLikelihood(
         FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]], NHPPData
     ]
 ):
+    r"""
+    Likelihood of a non-homogeneous Poisson process given failure observations.
+
+    With :math:`\lambda` the intensity and :math:`\Lambda` the cumulative
+    intensity, the negative log-likelihood sums:
+
+    - :math:`-\sum_i \log \lambda(t_i)` over the failure times :math:`t_i`,
+    - :math:`\sum_k \Lambda(e_k) - \Lambda(s_k)` over the observation windows
+      :math:`]s_k, e_k]` of the assets,
+    - :math:`-\sum_j c_j \log(\Lambda(b_j) - \Lambda(a_j))` over the partial
+      observations, :math:`c_j` failures counted in :math:`]a_j, b_j]`.
+
+    Use ``from_model`` to build it from a model.
+
+    Parameters
+    ----------
+    model : FittableParametricLifetimeModel
+        Lifetime model whose hazard function is the intensity of the process.
+    data : NHPPData
+        Validated failure observations.
+    config : FitConfig
+        Configuration used by the optimizer.
+    """
+
     def __init__(
         self,
         model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],

@@ -1,3 +1,5 @@
+"""Lifetime model of a series structure of identical components."""
+
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal, Self, final, override
 
@@ -20,31 +22,32 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
     r"""
     Series structure of n identical and independent components.
 
-    The hazard function of the system is given by:
+    The structure fails at the first failure of its components. Its hazard
+    function is:
 
     .. math::
 
-        h(t) = n \cdot  h_0(t)
+        h(t) = n \cdot h_0(t)
 
-    where :math:`h_0` is the baseline hazard function of the components.
+    where :math:`h_0` is the hazard function of the components.
 
     Parameters
     ----------
-    baseline : lifetime distribution or regression
-        Lifetime model.
+    baseline : FittableParametricLifetimeModel
+        Lifetime model of the components, a distribution or a regression.
+    n : int
+        Number of components.
 
     Examples
     --------
-
-    Computing the survival (or reliability) function for 3 structures of 3,6 and
-    9 identical and idependent components:
+    Survival function of a structure of 3 identical and independent
+    components:
 
     .. code-block::
 
-        model = MinimumDistribution(Weibull(2, 0.05))
+        model = MinimumDistribution(Weibull(2, 0.05), 3)
         t = np.arange(0, 10, 0.1)
-        n = np.array([3, 6, 9]).reshape(-1, 1)
-        model.sf(t, n)
+        model.sf(t)
     """
 
     baseline: FittableParametricLifetimeModel[*CovarTs]
@@ -172,7 +175,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
             selected with ``covar_column_names``.
         covar_column_names : sequence of str, default ()
             Names of the covariate columns in ``dataset``, used if ``baseline``
-            is a  regression model. Each covariate must be a column of floats.
+            is a regression model. Each covariate must be a column of floats.
         field_column_names : mapping of str to str, optional
             Column name of each lifetime field in ``dataset``, as
             ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.

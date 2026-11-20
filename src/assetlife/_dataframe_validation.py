@@ -1,4 +1,4 @@
-"""Dataset validation helpers shared by the likelihoods of fittable models."""
+"""Dataframe checks shared by the dataset validation of fittable models."""
 
 from collections.abc import Hashable, Sequence
 from typing import Any

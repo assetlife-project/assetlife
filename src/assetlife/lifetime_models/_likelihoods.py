@@ -1,3 +1,9 @@
+"""Likelihoods of lifetime models.
+
+``LifetimeLikelihood`` fits parametric lifetime models. The Cox partial
+likelihoods fit the covariates effect of the Cox semi-parametric regression.
+"""
+
 import copy
 from typing import Any, Literal, Self, final, override
 
@@ -18,23 +24,27 @@ class LifetimeLikelihood(
     ]
 ):
     """
-    Maximum likelihood estimator from lifetime data.
+    Likelihood of a parametric lifetime model given lifetime data.
+
+    The negative log-likelihood sums the contributions of the complete, the
+    censored and the left truncated lifetimes. Use ``from_model`` to build it
+    from a model.
 
     Parameters
     ----------
     model : FittableParametricLifetimeModel
-        Model with initialized parameters.
+        Model whose parameters are optimized.
     data : LifetimeData
-        Preprocessed lifetime observations.
+        Validated lifetime observations.
     config : FitConfig
         Configuration used by the optimizer.
 
     Attributes
     ----------
     model : FittableParametricLifetimeModel
-        Model used by the likelihood.
+        Model whose parameters are optimized.
     data : LifetimeData
-        Preprocessed lifetime observations.
+        Validated lifetime observations.
     config : FitConfig
         Configuration used by the optimizer.
     """
@@ -300,6 +310,12 @@ def _risk_set_sums(
 class CoxPartialLifetimeLikelihood(
     MaximumLikelihoodOptimizer[LinearCovarEffect, CoxData]
 ):
+    """Cox partial likelihood of the covariates effect, without tied event times.
+
+    Base class of the Breslow and Efron partial likelihoods. Use
+    ``from_model`` to get the likelihood handling the ties of the data.
+    """
+
     model: LinearCovarEffect
     data: CoxData
     config: FitConfig
@@ -408,6 +424,8 @@ class CoxPartialLifetimeLikelihood(
 
 @final
 class BreslowPartialLifetimeLikelihood(CoxPartialLifetimeLikelihood):
+    """Cox partial likelihood with Breslow's approximation of tied event times."""
+
     s_j: onp.ArrayND[np.float64]
 
     def __init__(
@@ -473,6 +491,8 @@ class BreslowPartialLifetimeLikelihood(CoxPartialLifetimeLikelihood):
 
 @final
 class EfronPartialLifetimeLikelihood(CoxPartialLifetimeLikelihood):
+    """Cox partial likelihood with Efron's approximation of tied event times."""
+
     s_j: onp.ArrayND[np.float64]
     discount_rates: onp.ArrayND[np.float64]
     discount_rates_mask: onp.ArrayND[np.bool_]

@@ -3,8 +3,9 @@
 Each ``validate_*`` function checks a dataframe and returns a container of numpy
 arrays: ``LifetimeData`` for parametric models, ``CoxData`` for the Cox
 semi-parametric regression and ``NonParametricData`` for the Kaplan-Meier and
-Nelson-Aalen estimators. Containers hold arrays only and know nothing about
-dataframes.
+Nelson-Aalen estimators. ``validate_complete_time``, used by the empirical
+cumulative distribution function, returns the times as a 1d array. Containers
+hold arrays only and know nothing about dataframes.
 """
 
 from collections.abc import Mapping, Sequence

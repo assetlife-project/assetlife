@@ -25,15 +25,19 @@ if TYPE_CHECKING:
 
 
 class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
-    """Non Homogeneous Poisson Process (NHPP)
+    """Non-homogeneous Poisson process (NHPP).
 
     Parameters
     ----------
     lifetime_model : ParametricLifetimeModel
-        Lifetime model that captures the NHPP intensity (lambda function) as its
-        hazard function.
-    fitting_results: FittingResults | None
-        Fitting Results after fitting the NHPP with failure data.
+        Lifetime model whose hazard function is the intensity of the process.
+        To fit the process, it must be a fittable model, e.g. a distribution
+        or a regression.
+
+    Attributes
+    ----------
+    fitting_results : FittingResults or None
+        Fitting results, None if the process is not fitted.
     """
 
     lifetime_model: ParametricLifetimeModel[*CovarTs]  # not accurate is case of fit

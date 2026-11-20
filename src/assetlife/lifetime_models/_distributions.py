@@ -192,7 +192,7 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
 
         Returns
         -------
-        self : ParametricLifetimeDistribution
+        self : LifetimeDistribution
             The fitted model. Estimated parameters are set in place.
         """
         data = validate_lifetime_data(dataset, field_column_names=field_column_names)
@@ -309,16 +309,6 @@ class Exponential(LifetimeDistribution):
         returns=[docscrape.Parameter("out", "np.float64", [""])],
     )
     def mrl(self, time: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        The mean residual life function.
-
-        Here, the exact mean residual life is computed.
-        Otherwise, `assetlife.lifetime_model.mrl` function.
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-        """
         return 1 / self.get_params()[0] * np.ones_like(time)
 
     @override
@@ -355,12 +345,6 @@ class Weibull(LifetimeDistribution):
     fitting_results : FittingResults, default is None
         An object containing fitting results (AIC, BIC, etc.).
         If the model is not fitted, the value is None.
-    nb_params
-    params
-    params_names
-    plot
-    shape
-    rate
     """
 
     def __init__(self, shape: float | None = None, rate: float | None = None) -> None:
@@ -453,16 +437,6 @@ class Weibull(LifetimeDistribution):
         returns=[docscrape.Parameter("out", "np.float64", [""])],
     )
     def mrl(self, time: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        The mean residual life function.
-
-        Here, the exact mean residual life is computed.
-        Otherwise, `assetlife.lifetime_model.mrl` function.
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-        """
         shape, rate = self.get_params()
         return (
             gamma(1 / shape)
@@ -602,16 +576,6 @@ class Gompertz(LifetimeDistribution):
         returns=[docscrape.Parameter("out", "np.float64", [""])],
     )
     def mrl(self, time: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        The mean residual life function.
-
-        Here, the exact mean residual life is computed.
-        Otherwise, `assetlife.lifetime_model.mrl` function.
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-        """
         shape, rate = self.get_params()
         z = shape * np.exp(rate * time)
         return np.exp(z) * exp1(z) / rate

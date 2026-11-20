@@ -1,3 +1,5 @@
+"""Cox semi-parametric proportional hazard regression."""
+
 from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
@@ -13,14 +15,65 @@ from assetlife.typing import CoercibleFloat64_1D
 
 
 class CoxEstimation(NamedTuple):
+    """Estimation of a function: timeline, values and standard errors.
+
+    ``se`` is None if the standard errors are not computed.
+    """
+
     timeline: onp.Array1D[np.float64]
     values: onp.Array1D[np.float64]
     se: onp.Array1D[np.float64] | None = None
 
 
 class SemiParametricProportionalHazard:
-    """
-    Cox semi-parametric proportional hazard.
+    r"""
+    Cox semi-parametric proportional hazard regression.
+
+    The hazard function is linked to the covariates by:
+
+    .. math::
+
+        h(t, x) = h_0(t) e^{\beta \cdot x}
+
+    where the coefficients :math:`\beta` maximize the partial likelihood and
+    the baseline :math:`h_0` is estimated non-parametrically (Breslow). As the
+    model is semi-parametric, it is defined by its data: it is fitted when
+    instantiated.
+
+    Parameters
+    ----------
+    dataset : DataFrame
+        Lifetime observations, one row per observation, as any eager
+        dataframe supported by narwhals (polars, pandas, pyarrow...).
+        Lifetimes are complete or right-censored, given as a ``time`` column
+        of floats. An optional ``event`` column of booleans tells whether
+        each lifetime is a failure (``True``) or right-censored
+        (``False``). If ``event`` is missing, all lifetimes are complete.
+        An optional ``entry`` column of floats holds left truncation values
+        (``0.`` if missing). Other columns are ignored, except covariates
+        selected with ``covar_column_names``.
+    covar_column_names : sequence of str
+        Names of the covariate columns in ``dataset``. At least one
+        covariate is required. Each covariate must be a column of floats.
+    field_column_names : mapping of str to str, optional
+        Column name of each lifetime field in ``dataset``, as
+        ``{field: column_name}``, e.g. ``{"time": "duration"}``. Fields are
+        ``"time"``, ``"event"`` and ``"entry"``. Fields not given are
+        looked up under their own name.
+    **kwargs
+        Extra keyword arguments passed to `scipy.optimize.minimize
+        <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+        which searches for the coefficients minimizing the negative partial
+        log-likelihood.
+
+        The additional keyword ``covariance_method`` controls how the
+        covariance matrix of the estimated coefficients is computed. If not
+        set, ``"exact"`` is used.
+
+    Attributes
+    ----------
+    fitting_results : FittingResults
+        Fitting results of the coefficients (AIC, BIC, covariance, etc.).
     """
 
     fitting_results: FittingResults
@@ -117,17 +170,19 @@ class SemiParametricProportionalHazard:
 
         Parameters
         ----------
-        covar: np.array
-            array with covariates values
+        *covar : float or np.ndarray
+            Covariate values, one per covariate of the fit. 1d arrays give one
+            estimation per value.
         se : bool, default True
-            If True, the standard errors are returned in addition to timeline
-            and sf values.
+            If True and the covariance matrix of the coefficients is known, the
+            standard errors are also computed.
 
         Returns
         -------
-        out : tuple of timeline, values, optionally se. Default is None
-            A timeline, corresponding sf values and optionnaly the standard
-            errors. If the estimations does not exist yet, returns None.
+        out : CoxEstimation
+            The ordered event times, the survival function values at these
+            times, of shape ``(k, m)`` for ``k`` covariate values (``(m,)`` for
+            scalars), and their standard errors (None if not computed).
         """
         g = self._covar_effect.g(*covar)
         g = g[:, None] if g.ndim == 1 else g

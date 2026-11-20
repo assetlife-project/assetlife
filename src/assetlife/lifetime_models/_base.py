@@ -1,4 +1,4 @@
-"""Parametric lifetime model base classes and fitting utilities."""
+"""Parametric lifetime model base classes."""
 
 from __future__ import annotations
 
@@ -405,9 +405,17 @@ class ParametricLifetimeModel[*CovarTs](ParametricModel, ABC):
             An optional existing matplotlib.axes.
         **kwargs
             Extra arguments to configure the plot:
-                - ci : bool, default is True if the model has fitting_results
-                - alpha_ci :
-                - any arguments allowed by matplotlib.plot
+
+            - ci : bool, default is True if the model is fitted. Whether to
+              plot the confidence interval.
+            - alpha_ci : float, default is 0.95. Confidence level of the
+              interval.
+            - any arguments allowed by ``matplotlib.pyplot.plot``.
+
+        Returns
+        -------
+        out : plt.Axes
+            The axes the function is plotted on.
 
         Raises
         ------
@@ -649,13 +657,11 @@ class _AgeReplacementModel(ParametricLifetimeModel[*CovarTs]):
 
     Parameters
     ----------
-    baseline : any parametric lifetime model (frozen lifetime model works)
-        The base lifetime model without conditional probabilities
-
-    Attributes
-    ----------
-    baseline
-    ar
+    baseline : ParametricLifetimeModel
+        Lifetime model without conditional probabilities (a frozen model
+        works).
+    ar : float or np.ndarray
+        Ages of replacement.
     """
 
     baseline: ParametricLifetimeModel[*CovarTs]
@@ -756,17 +762,11 @@ class _LeftTruncatedModel(
 
     Parameters
     ----------
-    baseline : any parametric lifetime model (frozen lifetime model works)
-        The base lifetime model without conditional probabilities
-    nb_params
-    params
-    params_names
-    plot
-
-    Attributes
-    ----------
-    baseline
-    a0
+    baseline : ParametricLifetimeModel
+        Lifetime model without conditional probabilities (a frozen model
+        works).
+    a0 : float or np.ndarray
+        Ages already reached by the assets.
     """
 
     baseline: ParametricLifetimeModel[*CovarTs]
@@ -987,14 +987,32 @@ def estimate_se(
     time: onp.Array1D[np.float64],
     *args: *CovarTs,
 ) -> onp.Array1D[np.float64] | None:
-    """
+    """Standard errors of a function of a fitted model, by the delta method.
+
+    Parameters
+    ----------
+    model : ParametricLifetimeModel
+        Fitted model.
+    fname : str
+        Name of the function, e.g. ``"sf"``. ``model`` must have a
+        ``jac_<fname>`` method.
+    time : 1d array of floats
+        Timeline at which to compute the standard errors. The first value is
+        skipped and its standard error is set to 0.
+    *args
+        Any additional args.
+
+    Returns
+    -------
+    out : 1d array of floats or None
+        Standard errors at each time, or None if the model has no covariance
+        matrix.
 
     References
     ----------
     .. [1] Meeker, W. Q., Escobar, L. A., & Pascual, F. G. (2022).
         Statistical methods for reliability data. John Wiley & Sons.
-    """
-    # [1] equation B.10 in Appendix
+    """  # [1] equation B.10 in Appendix
     if (
         model.fitting_results is not None
         and model.fitting_results.covariance_matrix is not None
@@ -1014,14 +1032,22 @@ def estimate_se(
 
 
 class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
-    """Base class for parametric lifetime models that can be fitted."""
+    """Base class for parametric lifetime models that can be fitted.
+
+    Declares what fitting needs from a model: parameter bounds, jacobians,
+    initial parameters, adaptation to the number of covariates and a default
+    covariance method. The fitting itself is done by the likelihoods, built
+    with their ``from_model`` class method.
+    """
 
     @abstractmethod
     def get_params_bounds(self) -> Bounds:
-        """The optimization Bounds for each parameter to fit
+        """Bounds of the parameters, used by the optimizer.
 
-        Returns:
-            Bounds: Bounds of the parameters
+        Returns
+        -------
+        out : scipy.optimize.Bounds
+            Lower and upper bounds of each parameter.
         """
 
     @abstractmethod

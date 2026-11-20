@@ -1,3 +1,5 @@
+"""Maximum likelihood optimization shared by fittable models."""
+
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -80,13 +82,20 @@ class MaximumLikelihoodOptimizer[M: ParametricModel, D](ABC):
     Notes
     -----
     Jacobian and hessian are not required but they can be implemented in
-    concrete likelihoods. To use the jacobian or hessian implementations in the
-    likelihood, pass them into ``self.config["scipy_minimize_options"]``.
+    concrete likelihoods. To use them, set them in
+    ``self.config.scipy_minimize_options``, under the ``"jac"`` and ``"hess"``
+    keys.
 
     Attributes
     ----------
+    model : ParametricModel
+        Model whose parameters are optimized.
+    data : object
+        Observations the likelihood is computed from.
+    config : FitConfig
+        Configuration used by the optimizer.
     nb_observations : int
-        The number of observations.
+        Number of observations, used by the information criteria.
     """
 
     model: M

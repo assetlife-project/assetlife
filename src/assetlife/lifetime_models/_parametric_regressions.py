@@ -1,9 +1,8 @@
-"""Lifetime regression
+"""Parametric lifetime regressions.
 
-Notes
------
-This module contains two parametric lifetime regressions.
-ProportionalHazard is not Cox regression (Cox is semiparametric).
+Proportional hazard and accelerated failure time regressions, whose baseline
+is a lifetime distribution. For the semi-parametric Cox regression, see
+``SemiParametricProportionalHazard``.
 """
 
 from __future__ import annotations
@@ -310,17 +309,18 @@ class ParametricProportionalHazard(ParametricLifetimeRegression):
 
     Parameters
     ----------
-    baseline : FittableParametricLifetimeModel
-        Any lifetime model that can be fitted.
-    coefficients : tuple of floats (values can be None), default is (None,)
-        Coefficients values of the covariate effects.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    coefficients : sequence of float, default ()
+        Coefficients of the covariates effect. Set to the number of
+        covariates when fitted.
 
     Attributes
     ----------
-    baseline : FittableParametricLifetimeModel
-        The regression baseline model (lifetime model).
-    covar_effect : _CovarEffect
-        The regression covariate effect.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    covar_effect : LinearCovarEffect
+        Covariates effect of the regression.
     fitting_results : FittingResults, default is None
         An object containing fitting results (AIC, BIC, etc.).
         If the model is not fitted, the value is None.
@@ -332,8 +332,8 @@ class ParametricProportionalHazard(ParametricLifetimeRegression):
 
     See Also
     --------
-    regression.AFT : Accelerated Failure Time regression.
-
+    ParametricAcceleratedFailureTime : Accelerated failure time regression.
+    SemiParametricProportionalHazard : Cox semi-parametric regression.
     """
 
     @override
@@ -439,17 +439,18 @@ class ParametricAcceleratedFailureTime(ParametricLifetimeRegression):
 
     Parameters
     ----------
-    baseline : FittableParametricLifetimeModel
-        Any lifetime model that can be fitted.
-    coefficients : tuple of floats (values can be None), default is (None,)
-        Coefficients values of the covariate effects.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    coefficients : sequence of float, default ()
+        Coefficients of the covariates effect. Set to the number of
+        covariates when fitted.
 
     Attributes
     ----------
-    baseline : FittableParametricLifetimeModel
-        The regression baseline model (lifetime model).
-    covar_effect : _CovarEffect
-        The regression covariate effect.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    covar_effect : LinearCovarEffect
+        Covariates effect of the regression.
     fitting_results : FittingResults, default is None
         An object containing fitting results (AIC, BIC, etc.).
         If the model is not fitted, the value is None.
@@ -461,7 +462,7 @@ class ParametricAcceleratedFailureTime(ParametricLifetimeRegression):
 
     See Also
     --------
-    regression.ProportionalHazard : proportional hazard regression
+    ParametricProportionalHazard : Proportional hazard regression.
     """
 
     @override

@@ -16,6 +16,8 @@ from assetlife.lifetime_models._base import _plot_probability_function
 
 
 class NonParametricEstimation(NamedTuple):
+    """Estimation of a function: timeline, values and standard errors."""
+
     timeline: Array1D[np.float64]
     values: Array1D[np.float64]
     se: Array1D[np.float64]
@@ -176,14 +178,13 @@ class KaplanMeier(NonParametricLifetimeModel[Literal["sf"]]):
 
     Notes
     -----
-    For a given time instant :math:`t` and :math:`n` total observations, this
-    estimator is defined as:
+    For a given time :math:`t`, this estimator is defined as:
 
     .. math::
 
         \hat{S}(t) = \prod_{i: t_i \leq t} \left( 1 - \frac{d_i}{n_i}\right)
 
-    where :math:`d_i` is the number of failures until :math:`t_i` and
+    where :math:`d_i` is the number of failures at :math:`t_i` and
     :math:`n_i` is the number of assets at risk just prior to :math:`t_i`.
 
     The variance estimation is obtained by:
@@ -270,14 +271,13 @@ class NelsonAalen(NonParametricLifetimeModel[Literal["chf"]]):
 
     Notes
     -----
-    For a given time instant :math:`t` and :math:`n` total observations, this
-    estimator is defined as:
+    For a given time :math:`t`, this estimator is defined as:
 
     .. math::
 
         \hat{H}(t) = \sum_{i: t_i \leq t} \frac{d_i}{n_i}
 
-    where :math:`d_i` is the number of failures until :math:`t_i` and
+    where :math:`d_i` is the number of failures at :math:`t_i` and
     :math:`n_i` is the number of assets at risk just prior to :math:`t_i`.
 
     The variance estimation is obtained by:

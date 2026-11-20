@@ -1,3 +1,5 @@
+"""Example lifetime datasets, loaded as polars dataframes."""
+
 from pathlib import Path
 
 import polars as pl
@@ -7,23 +9,24 @@ def load_power_transformer() -> pl.DataFrame:
     r"""
     Load example dataset of power transformers lifetimes.
 
+    Returns
+    -------
+    polars.DataFrame
+        One row per power transformer, with columns:
+
+        - ``time`` (``Float64``): observed lifetime values.
+        - ``event`` (``Boolean``): whether the failure is observed. If
+          ``False``, the lifetime is right-censored.
+        - ``entry`` (``Float64``): left truncation values.
+
     Examples
     --------
     >>> from assetlife.datasets import load_power_transformer
+    >>> from assetlife.lifetime_models import Weibull
     >>> data = load_power_transformer()
-    >>> print(data["time"])
-    [34.3 45.1 53.2 ... 30.  30.  30. ]
-
-    Returns
-    -------
-    structured array
-        A numpy structured array of 3 fields :
-
-        - time (``np.float64``) : observed lifetime values
-        - event (``np.bool_``) : boolean flag indicated if the event has been
-          observed or not (if False, the observed lifetimes are right censored)
-        - entry (``np.float64``) : left truncation values
-
+    >>> data.columns
+    ['time', 'event', 'entry']
+    >>> model = Weibull().fit(data)
     """
 
     return pl.read_csv(
@@ -41,29 +44,28 @@ def load_insulator_string() -> pl.DataFrame:
     r"""
     Load example dataset of insulator string lifetimes with covariates.
 
+    Returns
+    -------
+    polars.DataFrame
+        One row per insulator string, with columns:
+
+        - ``time`` (``Float64``): observed lifetime values.
+        - ``event`` (``Boolean``): whether the failure is observed. If
+          ``False``, the lifetime is right-censored.
+        - ``entry`` (``Float64``): left truncation values.
+        - ``pHCl``, ``pH2SO4`` and ``HNO3`` (``Float64``): covariates, the
+          concentrations of pHCl, pH2SO4 and HNO3.
+
     Examples
     --------
     >>> from assetlife.datasets import load_insulator_string
+    >>> from assetlife.lifetime_models import ParametricProportionalHazard, Weibull
     >>> data = load_insulator_string()
-    >>> print(data["time"])
-    [70.  30.  45.  ...  8.8  7.6 53. ]
-    >>> print(data["pHCl"])
-    [0.49 0.76 0.43 ... 1.12 1.19 0.35]
-
-    Returns
-    -------
-    structured array
-        A numpy structured array of 6 fields :
-
-        - time (``np.float64``) : observed lifetime values
-        - event (``np.bool_``) : boolean flag indicated if the event has been
-          observed or not (if False, the observed lifetimes are right censored)
-        - entry (``np.float64``) : left truncation values
-        - pHCl (``np.float64``) : quantitative covariate values (concentration of pHCl)
-        - pH2SO4 (``np.float64``) : quantitative covariate values (concentration of
-          pH2SO4)
-        - HNO3 (``np.float64``) : quantitative covariate values (concentration of HNO3)
-
+    >>> data.columns
+    ['time', 'event', 'entry', 'pHCl', 'pH2SO4', 'HNO3']
+    >>> model = ParametricProportionalHazard(Weibull()).fit(
+    ...     data, ["pHCl", "pH2SO4", "HNO3"]
+    ... )
     """
 
     return pl.read_csv(
@@ -84,22 +86,22 @@ def load_circuit_breaker() -> pl.DataFrame:
     r"""
     Load example dataset of circuit breaker lifetimes.
 
+    Returns
+    -------
+    polars.DataFrame
+        One row per circuit breaker, with columns:
+
+        - ``time`` (``Float64``): observed lifetime values.
+        - ``event`` (``Boolean``): whether the failure is observed. If
+          ``False``, the lifetime is right-censored.
+        - ``entry`` (``Float64``): left truncation values.
+
     Examples
     --------
     >>> from assetlife.datasets import load_circuit_breaker
     >>> data = load_circuit_breaker()
-    >>> print(data["time"])
-    [34. 28. 12. ... 42. 42. 37.]
-
-    Returns
-    -------
-    structured array
-        A numpy structured array of 3 fields :
-
-        - time (``np.float64``) : observed lifetime values
-        - event (``np.bool_``) : boolean flag indicated if the event has been
-          observed or not (if False, the observed lifetimes are right censored)
-        - entry (``np.float64``) : left truncation values
+    >>> data.columns
+    ['time', 'event', 'entry']
     """
 
     return pl.read_csv(
