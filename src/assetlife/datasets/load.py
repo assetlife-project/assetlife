@@ -1,8 +1,28 @@
 """Example lifetime datasets, loaded as polars dataframes."""
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import polars as pl
+
+_CSV_DIR = Path(__file__).parent / "csv"
+
+
+def _read_lifetime_csv(name: str, covars: Sequence[str] = ()) -> pl.DataFrame:
+    """Lifetime observations of ``csv/<name>.csv``, with ``event`` as booleans.
+
+    The files store ``event`` as numbers (``1``/``0``, ``1.0``/``0.0``), which
+    polars does not parse as booleans: it is read as floats, then cast.
+    """
+    schema = pl.Schema({
+        "time": pl.Float64(),
+        "event": pl.Float64(),
+        "entry": pl.Float64(),
+        **{covar: pl.Float64() for covar in covars},
+    })
+    return pl.read_csv(_CSV_DIR / f"{name}.csv", schema=schema).with_columns(
+        pl.col("event").cast(pl.Boolean)
+    )
 
 
 def load_power_transformer() -> pl.DataFrame:
@@ -29,15 +49,7 @@ def load_power_transformer() -> pl.DataFrame:
     >>> model = Weibull().fit(data)
     """
 
-    return pl.read_csv(
-        Path(Path(__file__).parents[0], "csv/power_transformer.csv"),
-        separator=",",
-        schema=pl.Schema({
-            "time": pl.Float64(),
-            "event": pl.Boolean(),
-            "entry": pl.Float64(),
-        }),
-    )
+    return _read_lifetime_csv("power_transformer")
 
 
 def load_insulator_string() -> pl.DataFrame:
@@ -68,18 +80,7 @@ def load_insulator_string() -> pl.DataFrame:
     ... )
     """
 
-    return pl.read_csv(
-        Path(Path(__file__).parents[0], "csv/insulator_string.csv"),
-        separator=",",
-        schema=pl.Schema({
-            "time": pl.Float64(),
-            "event": pl.Boolean(),
-            "entry": pl.Float64(),
-            "pHCl": pl.Float64(),
-            "pH2SO4": pl.Float64(),
-            "HNO3": pl.Float64(),
-        }),
-    )
+    return _read_lifetime_csv("insulator_string", ["pHCl", "pH2SO4", "HNO3"])
 
 
 def load_circuit_breaker() -> pl.DataFrame:
@@ -104,12 +105,4 @@ def load_circuit_breaker() -> pl.DataFrame:
     ['time', 'event', 'entry']
     """
 
-    return pl.read_csv(
-        Path(Path(__file__).parents[0], "csv/circuit_breaker.csv"),
-        separator=",",
-        schema=pl.Schema({
-            "time": pl.Float64(),
-            "event": pl.Boolean(),
-            "entry": pl.Float64(),
-        }),
-    )
+    return _read_lifetime_csv("circuit_breaker")
