@@ -160,6 +160,26 @@ class MaximumLikelihoodOptimizer[M: ParametricModel, D](ABC):
             )
         return fitting_results
 
+    def fit[T: ParametricModel](self, target: T) -> T:
+        """
+        Optimize, then set the optimal parameters and fitting results on ``target``.
+
+        Parameters
+        ----------
+        target : ParametricModel
+            Object fitted by the user, holding the parameters of ``self.model``:
+            the model itself, or e.g. the process built on it.
+
+        Returns
+        -------
+        target : ParametricModel
+            ``target``, fitted in place.
+        """
+        fitting_results = self.optimize()
+        target.set_params(fitting_results.optimal_params)
+        target.fitting_results = fitting_results
+        return target
+
 
 def _approx_parameters_covariance(
     params: onp.Array1D[np.float64],

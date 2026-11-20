@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Sequence
-from typing import Any, Self, final, override
+from typing import Any, Literal, Self, final, override
 
 import numpy as np
 import optype.numpy as onp
@@ -10,7 +10,7 @@ from scipy.optimize import Bounds
 from ._base import (
     FittableParametricLifetimeModel,
 )
-from ._datasets_validation import LifetimeData, validate_lifetime_data
+from ._datasets_validation import validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
 from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
@@ -132,14 +132,12 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         return self.baseline._init_params(time)  # ruff: ignore[private-member-access]
 
     @override
-    def _init_likelihood(
-        self,
-        dataset: LifetimeData,
-        **kwargs: Any,
-    ) -> LifetimeLikelihood:
-        likelihood = self.baseline._init_likelihood(dataset, **kwargs)  # ruff: ignore[private-member-access]
-        likelihood.model = MinimumDistribution(likelihood.model, self.n)
-        return likelihood
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        self.baseline._set_nb_covars(nb_covars)  # ruff: ignore[private-member-access]
+
+    @override
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:
+        return self.baseline._default_covariance_method()  # ruff: ignore[private-member-access]
 
     def fit(
         self,
@@ -199,11 +197,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         self : MinimumDistribution
             The fitted model. Estimated parameters are set in place.
         """
-        return self._fit(
-            validate_lifetime_data(
-                dataset,
-                field_column_names=field_column_names,
-                covar_column_names=covar_column_names,
-            ),
-            **kwargs,
+        data = validate_lifetime_data(
+            dataset, covar_column_names, field_column_names=field_column_names
         )
+        return LifetimeLikelihood.from_model(self, data, **kwargs).fit(self)

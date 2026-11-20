@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
+    Literal,
     Self,
     final,
     override,
@@ -22,9 +23,8 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
-from ._datasets_validation import LifetimeData, observed_time, validate_lifetime_data
+from ._datasets_validation import validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
-from assetlife._optimization import FitConfig
 from assetlife.quadratures import (
     laguerre_quadrature,
 )
@@ -137,24 +137,10 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         return param0
 
     @override
-    def _init_likelihood(
-        self, dataset: LifetimeData, **kwargs: Any
-    ) -> LifetimeLikelihood:
-        fresh_distrib = type(self)()
-        x0 = (
-            kwargs["x0"]
-            if "x0" in kwargs
-            else fresh_distrib._init_params(observed_time(dataset))  # ruff: ignore[private-member-access]
-        )
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_distrib.get_params_bounds()
-        )
-        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
-        config.covariance_method = kwargs.get(
-            "covariance_method", "2point" if isinstance(fresh_distrib, Gamma) else "cs"
-        )
-        return LifetimeLikelihood(fresh_distrib, dataset, config)
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        if nb_covars > 0:
+            msg = "No covariates can be given for fit when using a distribution."
+            raise ValueError(msg)
 
     def fit(
         self,
@@ -209,10 +195,8 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         self : ParametricLifetimeDistribution
             The fitted model. Estimated parameters are set in place.
         """
-        return self._fit(
-            validate_lifetime_data(dataset, field_column_names=field_column_names),
-            **kwargs,
-        )
+        data = validate_lifetime_data(dataset, field_column_names=field_column_names)
+        return LifetimeLikelihood.from_model(self, data, **kwargs).fit(self)
 
 
 @final
@@ -793,6 +777,11 @@ class Gamma(LifetimeDistribution):
     def __repr__(self) -> str:
         params = self.get_params()
         return f"Gamma(shape={params[0].item()!r}, rate={params[1].item()!r})"
+
+    @override
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:
+        # complex step is not supported by scipy incomplete gamma functions
+        return "2point"
 
 
 @final

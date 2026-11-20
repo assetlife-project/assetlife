@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, final, override
+import copy
+from typing import TYPE_CHECKING, Any, Self, final, override
 
 import numpy as np
 
@@ -34,6 +35,53 @@ class NHPPLikelihood(
         self.config = config
         if "jac" not in self.config.scipy_minimize_options:
             self.config.scipy_minimize_options["jac"] = self.jac_negative_log
+
+    @classmethod
+    def from_model(
+        cls,
+        model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],
+        data: NHPPData,
+        **kwargs: Any,
+    ) -> Self:
+        """Likelihood of a NHPP of intensity ``model.hf`` given ``data``.
+
+        ``model`` is adapted in place to the number of covariates of ``data``.
+        The likelihood works on a copy of it, so ``model`` is not changed by
+        the optimization: use ``.fit(process)`` to set the optimal parameters
+        on the process holding ``model``.
+
+        Parameters
+        ----------
+        model : FittableParametricLifetimeModel
+            Lifetime model whose hazard function is the intensity of the process.
+        data : NHPPData
+            Validated failure observations.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
+            (e.g. ``x0``, ``bounds``, ``method``) and ``covariance_method``.
+            Defaults are the parameters initialized by ``model``, its
+            bounds, ``method="L-BFGS-B"`` and its default covariance method.
+
+        Returns
+        -------
+        NHPPLikelihood
+        """
+        # resize first: x0 and bounds depend on the number of parameters
+        model._set_nb_covars(data.nb_covars)  # ruff: ignore[private-member-access]
+        x0 = (
+            kwargs["x0"] if "x0" in kwargs else model._init_params(data.failures_time)  # ruff: ignore[private-member-access]
+        )
+        config = FitConfig(x0)
+        config.scipy_minimize_options["bounds"] = kwargs.get(
+            "bounds", model.get_params_bounds()
+        )
+        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
+        config.covariance_method = kwargs.get(
+            "covariance_method",
+            model._default_covariance_method(),  # ruff: ignore[private-member-access]
+        )
+        return cls(copy.deepcopy(model), data, config)
 
     @property
     @override

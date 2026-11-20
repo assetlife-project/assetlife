@@ -1,11 +1,12 @@
-from typing import Literal, final, override
+import copy
+from typing import Any, Literal, Self, final, override
 
 import numpy as np
 import optype.numpy as onp
 
 from ._base import FittableParametricLifetimeModel
 from ._covar_effect import LinearCovarEffect
-from ._datasets_validation import CoxData, LifetimeData
+from ._datasets_validation import CoxData, LifetimeData, observed_time
 from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
 from assetlife.typing import CoercibleFloat64_ND
 
@@ -51,6 +52,56 @@ class LifetimeLikelihood(
         self.config = config
         if "jac" not in self.config.scipy_minimize_options:
             self.config.scipy_minimize_options["jac"] = self.jac_negative_log
+
+    @classmethod
+    def from_model(
+        cls,
+        model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],
+        data: LifetimeData,
+        **kwargs: Any,
+    ) -> Self:
+        """Likelihood of ``model`` given ``data``, ready to be optimized.
+
+        ``fit`` methods are the preferred way to fit a model. This likelihood
+        can also be used on its own to study the optimization process.
+
+        ``model`` is adapted in place to the number of covariates of ``data``.
+        The likelihood works on a copy of it, so ``model`` is not changed by
+        the optimization: use ``.fit(model)`` to set the optimal parameters on
+        it.
+
+        Parameters
+        ----------
+        model : FittableParametricLifetimeModel
+            Model to fit.
+        data : LifetimeData
+            Validated lifetime observations.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
+            (e.g. ``x0``, ``bounds``, ``method``) and ``covariance_method``.
+            Defaults are the parameters initialized by ``model``, its
+            bounds, ``method="L-BFGS-B"`` and its default covariance method.
+
+        Returns
+        -------
+        LifetimeLikelihood
+        """
+        # resize first: x0 and bounds depend on the number of parameters
+        model._set_nb_covars(data.nb_covars)  # ruff: ignore[private-member-access]
+        x0 = (
+            kwargs["x0"] if "x0" in kwargs else model._init_params(observed_time(data))  # ruff: ignore[private-member-access]
+        )
+        config = FitConfig(x0)
+        config.scipy_minimize_options["bounds"] = kwargs.get(
+            "bounds", model.get_params_bounds()
+        )
+        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
+        config.covariance_method = kwargs.get(
+            "covariance_method",
+            model._default_covariance_method(),  # ruff: ignore[private-member-access]
+        )
+        return cls(copy.deepcopy(model), data, config)
 
     @property
     @override
@@ -267,6 +318,48 @@ class CoxPartialLifetimeLikelihood(
             self.config.scipy_minimize_options["jac"] = self.jac_negative_log
         if "hess" not in self.config.scipy_minimize_options:
             self.config.scipy_minimize_options["hess"] = self.hess_negative_log
+
+    @classmethod
+    def from_model(
+        cls,
+        model: LinearCovarEffect,
+        data: CoxData,
+        **kwargs: Any,
+    ) -> "CoxPartialLifetimeLikelihood":
+        """Partial likelihood of ``model`` given ``data``, handling the ties.
+
+        Efron if more than 3 failures share an event time, Breslow if at most 3
+        do and some pairs exist, the plain Cox partial likelihood otherwise.
+        The likelihood works on a copy of ``model``, so ``model`` is not changed
+        by the optimization.
+
+        Parameters
+        ----------
+        model : LinearCovarEffect
+            Covariates effect to fit, with one coefficient per covariate.
+        data : CoxData
+            Validated lifetime observations.
+        **kwargs
+            Extra keyword arguments passed to `scipy.optimize.minimize
+            <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
+            (defaults: ``x0`` all zeros, ``method="trust-exact"``) and
+            ``covariance_method`` (default ``"exact"``).
+
+        Returns
+        -------
+        CoxPartialLifetimeLikelihood
+            Instance of the subclass handling the ties of ``data``.
+        """
+        x0 = kwargs.get("x0", np.zeros(data.nb_covars, dtype=np.float64))
+        config = FitConfig(x0)
+        config.scipy_minimize_options["method"] = kwargs.get("method", "trust-exact")
+        config.covariance_method = kwargs.get("covariance_method", "exact")
+        model = copy.deepcopy(model)
+        if (data.event_count > 3).any():
+            return EfronPartialLifetimeLikelihood(model, data, config)
+        if 2 in data.event_count:
+            return BreslowPartialLifetimeLikelihood(model, data, config)
+        return CoxPartialLifetimeLikelihood(model, data, config)
 
     @property
     @override

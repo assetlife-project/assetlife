@@ -11,7 +11,6 @@ from typing import (
     Any,
     Literal,
     ParamSpec,
-    Self,
     TypeVar,
     cast,
     no_type_check,
@@ -26,15 +25,12 @@ from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy import stats
 from scipy.optimize import Bounds, newton
 
-from assetlife.base import FittingResults, ParametricModel
+from assetlife.base import ParametricModel
 from assetlife.quadratures import legendre_quadrature, unweighted_laguerre_quadrature
 from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-
-    from ._datasets_validation import LifetimeData
-    from ._likelihoods import LifetimeLikelihood
 
 
 @overload
@@ -1020,8 +1016,6 @@ def estimate_se(
 class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
     """Base class for parametric lifetime models that can be fitted."""
 
-    fitting_results: FittingResults | None
-
     @abstractmethod
     def get_params_bounds(self) -> Bounds:
         """The optimization Bounds for each parameter to fit
@@ -1176,62 +1170,29 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         """
 
     @abstractmethod
-    def _init_likelihood(
-        self, dataset: LifetimeData, **kwargs: Any
-    ) -> LifetimeLikelihood:
-        r"""
-        Initialize the lifetime likelihood used to fit the parameters.
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        """Adapt the model, in place, to data with ``nb_covars`` covariates.
 
-        ``fit`` method is the preferred way to fit model parameters. However,
-        users can also interact with the likelihood returned by
-        ``init_likelihood`` to study the optimization process.
-
-        This method implementation is usually composed of 3 steps:
-            1. Initialize an object to store and preprocess lifetime values.
-            2. Create a ``FitConfig`` instance depending on the model needs.
-            3. Instantiate and return a ``LifetimeLikelihood``.
-
-        ``init_likelihood`` is separated from ``fit`` in order to reuse existing
-        likelihood parametrization in case of model composition. Any parameters
-        initialization needed by the likelihood optimizer (e.g. ``x0`` or
-        ``bounds`` as required in step 2.) are left to specific functions
-        alongside concrete model implementations. These functions are invoked
-        within ``init_likelihood``.
+        Called before fitting, as the number of parameters of some models (e.g.
+        regressions) depends on the number of covariates.
 
         Parameters
         ----------
-        time : 1d array or 2d array
-            Observed lifetime values. 1d array can handle complete and right censored
-            lifetimes with ``event``. To add left censored or interval censored
-            lifetimes, use 2d array.
-        args : any ndarray or tuple of ndarray, default is None
-            Additional arguments required by the model (e.g. covar).
-        event : 1d array of bool, default is None
-            Boolean indicators tagging lifetime values as right censored or complete.
-        entry : 1d array, default is None
-            Left truncations applied to lifetime values.
-        **kwargs
-            Extra arguments to control the parameters optimization. It can be:
+        nb_covars : int
+            Number of covariates of the data the model is fitted to.
 
-                - those used by `scipy.optimize.minimize
-                  <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
-                  to search for the parameters that minimize the negative
-                  log-likelihood.
-                - `covariance_method` to control the method used to estimate
-                  parameters covariance. Values can be `"cs"`, `"2point"`,
-                  `"exact"` or `False`. To skip parameters covariance
-                  estimation, set `covariance_method` to `False`, otherwise the
-                  default method associated to the model will be used. If
-                  `covariance_method` is `"exact"` the `hess` must be passed
-                  too.
+        Raises
+        ------
+        ValueError
+            If the model cannot be fitted with ``nb_covars`` covariates.
+        """
+
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:  # ruff: ignore[no-self-use]
+        """Covariance method used if ``covariance_method`` is not given to fit.
 
         Returns
         -------
-        out : LifetimeLikelihood instance
+        out : {"cs", "2point"}
+            ``"cs"`` (complex step) by default.
         """
-
-    def _fit(self, dataset: LifetimeData, **kwargs: Any) -> Self:
-        likelihood = self._init_likelihood(dataset, **kwargs)
-        self.fitting_results = likelihood.optimize()
-        self.set_params(self.fitting_results.optimal_params)
-        return self
+        return "cs"

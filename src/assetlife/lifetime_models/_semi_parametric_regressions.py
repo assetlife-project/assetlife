@@ -7,13 +7,7 @@ from narwhals.typing import IntoDataFrame
 
 from ._covar_effect import LinearCovarEffect
 from ._datasets_validation import CoxData, validate_cox_data
-from ._likelihoods import (
-    BreslowPartialLifetimeLikelihood,
-    CoxPartialLifetimeLikelihood,
-    EfronPartialLifetimeLikelihood,
-    _risk_set_sums,
-)
-from assetlife._optimization import FitConfig
+from ._likelihoods import CoxPartialLifetimeLikelihood, _risk_set_sums
 from assetlife.base import FittingResults
 from assetlife.typing import CoercibleFloat64_1D
 
@@ -81,32 +75,13 @@ class SemiParametricProportionalHazard:
             dataset, covar_column_names, field_column_names=field_column_names
         )
         self._covar_effect = LinearCovarEffect(*(0.0,) * self._data.nb_covars)
-        fitting_results = self._init_likelihood(**kwargs).optimize()
+        fitting_results = CoxPartialLifetimeLikelihood.from_model(
+            self._covar_effect, self._data, **kwargs
+        ).optimize()
         self._covar_effect.set_params(fitting_results.optimal_params)
         self.fitting_results = fitting_results
         timeline = self._data.ordered_event_time.copy()
         self._sf0_estimation = CoxEstimation(timeline=timeline, values=self._sf0())
-
-    def _init_likelihood(self, **kwargs: Any) -> CoxPartialLifetimeLikelihood:
-        """Partial likelihood handling the ties of the event times.
-
-        Efron if more than 3 failures share an event time, Breslow if at most 3
-        do and some pairs exist, the plain Cox partial likelihood otherwise.
-        """
-        x0 = kwargs.get("x0", np.zeros(self._data.nb_covars, dtype=float))
-        config = FitConfig(x0)
-        config.scipy_minimize_options["method"] = kwargs.get("method", "trust-exact")
-        config.covariance_method = kwargs.get("covariance_method", "exact")
-        event_count = self._data.event_count
-        if (event_count > 3).any():
-            return EfronPartialLifetimeLikelihood(
-                self._covar_effect, self._data, config
-            )
-        if 2 in event_count:
-            return BreslowPartialLifetimeLikelihood(
-                self._covar_effect, self._data, config
-            )
-        return CoxPartialLifetimeLikelihood(self._covar_effect, self._data, config)
 
     def get_params(self) -> onp.Array1D[np.float64]:
         return self._covar_effect.get_params()

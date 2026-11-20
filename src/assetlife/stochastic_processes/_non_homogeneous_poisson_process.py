@@ -4,17 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self, override
 
-from ._datasets_validation import NHPPData, validate_nhpp_data
+from ._datasets_validation import validate_nhpp_data
 from ._likelihoods import NHPPLikelihood
-from assetlife._optimization import FitConfig
 from assetlife.base import FittingResults, ParametricModel
-from assetlife.lifetime_models._distributions import (
-    Gamma,
-    LifetimeDistribution,
-)
-from assetlife.lifetime_models._parametric_regressions import (
-    ParametricLifetimeRegression,
-)
+from assetlife.lifetime_models import FittableParametricLifetimeModel
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -97,60 +90,6 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         """
         return self.lifetime_model.chf(time, *args)
 
-    def _init_likelihood(self, data: NHPPData, **kwargs: Any) -> NHPPLikelihood:
-        if isinstance(self.lifetime_model, LifetimeDistribution):
-            if data.nb_covars > 0:
-                msg = "No covariates can be given for fit when using a distribution."
-                raise ValueError(msg)
-            fresh_model = type(self.lifetime_model)()
-            covariance_method = kwargs.get(
-                "covariance_method",
-                "2point" if isinstance(fresh_model, Gamma) else "cs",
-            )
-        elif isinstance(self.lifetime_model, ParametricLifetimeRegression):
-            if data.nb_covars == 0:
-                msg = "Covariates must be given for fit when using a regression."
-                raise ValueError(msg)
-            fresh_model = type(self.lifetime_model)(
-                type(self.lifetime_model.baseline)(),
-                coefficients=(0.0,) * data.nb_covars,
-            )
-            covariance_method = kwargs.get(
-                "covariance_method",
-                "2point" if isinstance(fresh_model.baseline, Gamma) else "cs",
-            )
-        else:
-            msg = (
-                "Cannot initiate NHPP likelihood with the model "
-                f"{self.lifetime_model}, expected Parametric Distribution or "
-                "Regression."
-            )
-            raise TypeError(msg)
-
-        x0 = (
-            kwargs["x0"]
-            if "x0" in kwargs
-            else fresh_model._init_params(data.failures_time)  # ruff: ignore[private-member-access]
-        )
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_model.get_params_bounds()
-        )
-        config.covariance_method = covariance_method
-        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
-        return NHPPLikelihood(fresh_model, data, config)
-
-    def _fit(self, data: NHPPData, **kwargs: Any) -> Self:
-        likelihood = self._init_likelihood(data, **kwargs)
-        fitting_results = likelihood.optimize()
-        if isinstance(self.lifetime_model, ParametricLifetimeRegression):
-            self.lifetime_model.covar_effect.set_params(
-                [0.0] * data.nb_covars
-            )  # resize coefficients
-        self.set_params(fitting_results.optimal_params)
-        self.fitting_results = fitting_results
-        return self
-
     def fit(
         self,
         failures: IntoDataFrame,
@@ -204,6 +143,12 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         self : NonHomogeneousPoissonProcess
             The fitted process. Estimated parameters are set in place.
 
+        Raises
+        ------
+        TypeError
+            If the lifetime model of the process is not a fittable parametric
+            lifetime model.
+
         Examples
         --------
         >>> failures
@@ -231,15 +176,19 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         ...     partial_observations=partial_observations,
         ... )
         """
-        return self._fit(
-            validate_nhpp_data(
-                failures,
-                assets,
-                covar_column_names=covar_column_names,
-                partial_observations=partial_observations,
-            ),
-            **kwargs,
+        if not isinstance(self.lifetime_model, FittableParametricLifetimeModel):
+            msg = (
+                f"Cannot fit a NHPP with the model {self.lifetime_model}, "
+                "expected a fittable parametric lifetime model."
+            )
+            raise TypeError(msg)
+        data = validate_nhpp_data(
+            failures,
+            assets,
+            covar_column_names,
+            partial_observations=partial_observations,
         )
+        return NHPPLikelihood.from_model(self.lifetime_model, data, **kwargs).fit(self)
 
     def freeze(self, *args: *CovarTs) -> FrozenNonHomogeneousPoissonProcess[*CovarTs]:
         """

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from abc import ABC
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Self, final, override
+from typing import TYPE_CHECKING, Any, Literal, Self, final, override
 
 import numpy as np
 from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
@@ -22,19 +22,15 @@ from ._base import (
     document_args,
 )
 from ._covar_effect import LinearCovarEffect
-from ._datasets_validation import LifetimeData, observed_time, validate_lifetime_data
-from ._distributions import (
-    Gamma,
-    LifetimeDistribution,
-)
+from ._datasets_validation import validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
-from assetlife._optimization import FitConfig
 from assetlife.typing import CoercibleFloat64_ND
 
 if TYPE_CHECKING:
     import optype.numpy as onp
     from narwhals.typing import IntoDataFrame
 
+    from ._distributions import LifetimeDistribution
     from assetlife.typing import Float64_ND
 
 
@@ -220,37 +216,15 @@ class ParametricLifetimeRegression(
         return param0
 
     @override
-    def _init_likelihood(
-        self,
-        dataset: LifetimeData,
-        **kwargs: Any,
-    ) -> LifetimeLikelihood:
-        fresh_regression = type(self)(
-            type(self.baseline)(), coefficients=(0.0,) * dataset.nb_covars
-        )  # init new regression object with appropriate number of covar
-        x0 = (
-            kwargs["x0"]
-            if "x0" in kwargs
-            else fresh_regression._init_params(observed_time(dataset))  # ruff: ignore[private-member-access]
-        )
-        fresh_regression.set_params(x0)
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_regression.get_params_bounds()
-        )
-        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
-        config.covariance_method = kwargs.get(
-            "covariance_method",
-            "2point" if isinstance(fresh_regression.baseline, Gamma) else "cs",
-        )
-        return LifetimeLikelihood(fresh_regression, dataset, config)
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        if nb_covars == 0:
+            msg = "Covariates must be given for fit when using a regression."
+            raise ValueError(msg)
+        self.covar_effect.set_params([0.0] * nb_covars)  # resize coefficients
 
     @override
-    def _fit(self, dataset: LifetimeData, **kwargs: Any) -> Self:
-        self.covar_effect.set_params(
-            [0.0] * len(dataset.complete_time_covars)
-        )  # resize coefficients
-        return super()._fit(dataset, **kwargs)
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:
+        return self.baseline._default_covariance_method()  # ruff: ignore[private-member-access]
 
     def fit(
         self,
@@ -310,14 +284,10 @@ class ParametricLifetimeRegression(
         self : ParametricLifetimeRegression
             The fitted model. Estimated parameters are set in place.
         """
-        return self._fit(
-            validate_lifetime_data(
-                dataset,
-                field_column_names=field_column_names,
-                covar_column_names=covar_column_names,
-            ),
-            **kwargs,
+        data = validate_lifetime_data(
+            dataset, covar_column_names, field_column_names=field_column_names
         )
+        return LifetimeLikelihood.from_model(self, data, **kwargs).fit(self)
 
 
 @final
