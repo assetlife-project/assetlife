@@ -22,7 +22,7 @@ from ._base import (
     document_args,
 )
 from ._covar_effect import LinearCovarEffect
-from ._datasets import LifetimeData
+from ._datasets import LifetimeData, observed_time
 from ._distributions import (
     Gamma,
     LifetimeDistribution,
@@ -214,12 +214,9 @@ class ParametricLifetimeRegression(
         )
 
     @override
-    def _init_params(
-        self,
-        dataset: LifetimeData,
-    ) -> onp.Array1D[np.float64]:
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
         param0 = np.zeros_like(self.get_params(), dtype=np.float64)
-        param0[-self.baseline.get_params().size :] = self.baseline._init_params(dataset)  # ruff: ignore[private-member-access]
+        param0[-self.baseline.get_params().size :] = self.baseline._init_params(time)  # ruff: ignore[private-member-access]
         return param0
 
     @override
@@ -231,7 +228,11 @@ class ParametricLifetimeRegression(
         fresh_regression = type(self)(
             type(self.baseline)(), coefficients=(0.0,) * dataset.nb_covars
         )  # init new regression object with appropriate number of covar
-        x0 = kwargs.get("x0", fresh_regression._init_params(dataset))  # ruff: ignore[private-member-access]
+        x0 = (
+            kwargs["x0"]
+            if "x0" in kwargs
+            else fresh_regression._init_params(observed_time(dataset))  # ruff: ignore[private-member-access]
+        )
         fresh_regression.set_params(x0)
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(

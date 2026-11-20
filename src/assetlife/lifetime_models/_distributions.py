@@ -22,7 +22,7 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
-from ._datasets import LifetimeData
+from ._datasets import LifetimeData, observed_time
 from ._likelihoods import LifetimeLikelihood
 from assetlife._optimization import FitConfig
 from assetlife.quadratures import (
@@ -131,15 +131,9 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         )
 
     @override
-    def _init_params(self, dataset: LifetimeData) -> onp.Array1D[np.float64]:
-        time = np.append(
-            dataset.complete_time.flatten(), dataset.censored_time.flatten()
-        )
-        # flatten in case of 2D time
-        flatten_time = time.flatten()
-        nb_params = self.get_params().size
-        param0 = np.ones(nb_params, dtype=np.float64)
-        param0[-1] = 1 / np.median(flatten_time)
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+        param0 = np.ones(self.get_params().size, dtype=np.float64)
+        param0[-1] = 1 / np.median(time)
         return param0
 
     @override
@@ -147,7 +141,11 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         self, dataset: LifetimeData, **kwargs: Any
     ) -> LifetimeLikelihood:
         fresh_distrib = type(self)()
-        x0 = kwargs.get("x0", fresh_distrib._init_params(dataset))  # ruff: ignore[private-member-access]
+        x0 = (
+            kwargs["x0"]
+            if "x0" in kwargs
+            else fresh_distrib._init_params(observed_time(dataset))  # ruff: ignore[private-member-access]
+        )
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(
             "bounds", fresh_distrib.get_params_bounds()
@@ -639,21 +637,10 @@ class Gompertz(LifetimeDistribution):
         return f"Gompertz(shape={params[0].item()!r}, rate={params[1].item()!r})"
 
     @override
-    def _init_params(
-        self,
-        dataset: LifetimeData,
-    ) -> onp.Array1D[np.float64]:
-        # flatten in case of 2D time
-        time = np.append(
-            dataset.complete_time.flatten(), dataset.censored_time.flatten()
-        )
-        nb_params = self.get_params().size
-        param0 = np.empty(nb_params, dtype=np.float64)
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
         rate = np.pi / (np.sqrt(6) * np.std(time))
         shape = np.exp(-rate * np.mean(time))
-        param0[0] = shape
-        param0[1] = rate
-        return param0
+        return np.array([shape, rate], dtype=np.float64)
 
 
 @final

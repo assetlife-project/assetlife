@@ -127,8 +127,8 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
         return self.baseline.get_params_bounds()
 
     @override
-    def _init_params(self, dataset: LifetimeData) -> onp.Array1D[np.float64]:
-        return self.baseline._init_params(dataset)  # ruff: ignore[private-member-access]
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+        return self.baseline._init_params(time)  # ruff: ignore[private-member-access]
 
     @override
     def _init_likelihood(

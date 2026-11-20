@@ -13,7 +13,6 @@ from assetlife._dataset_validation import (
     check_numeric,
     to_eager_df,
 )
-from assetlife.lifetime_models._datasets import LifetimeData
 
 if TYPE_CHECKING:
     import narwhals as nw
@@ -207,7 +206,6 @@ class NHPPData:
     observations_covars: tuple[onp.Array1D[np.float64], ...]
     nb_covars: int
     partial_observations: PartialObservations | None
-    failures_lifetime_data: LifetimeData
 
     def __init__(
         self,
@@ -232,8 +230,6 @@ class NHPPData:
         failures_df = _read_failures(failures, assets_df)
         self.failures_time = _to_float_1d(failures_df, "time")
         self.failures_covars = tuple(_to_float_1d(failures_df, c) for c in covars)
-        # failure times seen as complete lifetimes, to initialize parameters
-        self.failures_lifetime_data = LifetimeData(failures_df.select("time"))
 
         self.partial_observations = (
             None

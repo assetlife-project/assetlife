@@ -251,6 +251,18 @@ class LifetimeData:
         self.left_truncations_covars = tuple(covar[truncated] for covar in covars)
 
 
+def observed_time(data: LifetimeData) -> onp.Array1D[np.float64]:
+    """Finite observed times of ``data``, flattened, to initialize parameters.
+
+    Complete times, right-censored times and finite bounds of censoring
+    intervals. Infinite upper bounds (right-censored lifetimes given as
+    ``[x, inf]``) are dropped, as they would make statistics like the mean or
+    the standard deviation infinite or NaN.
+    """
+    time = np.concatenate((data.complete_time.ravel(), data.censored_time.ravel()))
+    return time[np.isfinite(time)]
+
+
 class CoxData:
     """Observation schema for the Cox semi-parametric regression.
 

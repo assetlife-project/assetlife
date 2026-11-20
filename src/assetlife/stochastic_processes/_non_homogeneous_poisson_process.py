@@ -127,9 +127,10 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
             )
             raise TypeError(msg)
 
-        x0 = kwargs.get(
-            "x0",
-            fresh_model._init_params(data.failures_lifetime_data),  # ruff: ignore[private-member-access]
+        x0 = (
+            kwargs["x0"]
+            if "x0" in kwargs
+            else fresh_model._init_params(data.failures_time)  # ruff: ignore[private-member-access]
         )
         config = FitConfig(x0)
         config.scipy_minimize_options["bounds"] = kwargs.get(

@@ -1161,12 +1161,13 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         ) * self.hf(time, *args)
 
     @abstractmethod
-    def _init_params(self, dataset: LifetimeData) -> onp.Array1D[np.float64]:
-        """Init params with statistical heuristics from time data.
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+        """Init params with statistical heuristics from observed times.
 
-        Parameters:
-            time : 1d array of floats or 2d array of shape (n, 2)
-            Lifetimes to init from.
+        Parameters
+        ----------
+        time : 1d array of floats
+            Finite observed times to init from. Censoring is ignored.
 
         Returns
         -------
