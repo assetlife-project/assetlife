@@ -6,7 +6,7 @@ import optype.numpy as onp
 from narwhals.typing import IntoDataFrame
 
 from ._covar_effect import LinearCovarEffect
-from ._datasets import CoxData
+from ._datasets_validation import CoxData, validate_cox_data
 from ._likelihoods import (
     BreslowPartialLifetimeLikelihood,
     CoxPartialLifetimeLikelihood,
@@ -77,7 +77,7 @@ class SemiParametricProportionalHazard:
             covariance matrix of the estimated coefficients is computed. If not
             set, ``"exact"`` is used.
         """
-        self._data = CoxData(
+        self._data = validate_cox_data(
             dataset, covar_column_names, field_column_names=field_column_names
         )
         self._covar_effect = LinearCovarEffect(*(0.0,) * self._data.nb_covars)

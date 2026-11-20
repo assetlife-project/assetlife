@@ -22,9 +22,10 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
-from ._datasets import LifetimeData, observed_time
+from ._datasets_validation import LifetimeData, observed_time
 from ._likelihoods import LifetimeLikelihood
 from assetlife._optimization import FitConfig
+from assetlife.lifetime_models._datasets_validation import validate_lifetime_data
 from assetlife.quadratures import (
     laguerre_quadrature,
 )
@@ -210,7 +211,8 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
             The fitted model. Estimated parameters are set in place.
         """
         return self._fit(
-            LifetimeData(dataset, field_column_names=field_column_names), **kwargs
+            validate_lifetime_data(dataset, field_column_names=field_column_names),
+            **kwargs,
         )
 
 

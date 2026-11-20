@@ -1,11 +1,19 @@
+"""Validation of failure datasets into the container used by stochastic processes.
+
+``validate_nhpp_data`` checks the failures, assets and optional partial
+observations dataframes and returns a ``NHPPData`` container of numpy arrays,
+used by the likelihood of non-homogeneous Poisson processes.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, NamedTuple
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from assetlife._dataset_validation import (
+from assetlife._dataframe_validation import (
     check_columns_exist,
     check_hashable,
     check_no_missing_values,
@@ -23,6 +31,73 @@ _RESERVED_NAMES = frozenset({"id", "time", "start", "end", "count"})
 # asset window bounds, renamed to not clash with failures or partial columns
 _ASSET_START = "__asset_start__"
 _ASSET_END = "__asset_end__"
+
+
+# Datasets containers
+
+
+@dataclass(frozen=True)
+class PartialObservations:
+    """Numbers of failures observed per time window, with their covariates.
+
+    Attributes
+    ----------
+    failures_count : np.ndarray
+        Number of failures observed in each window, of shape ``(k,)``.
+    start : np.ndarray
+        Start of each window, of shape ``(k,)``.
+    end : np.ndarray
+        End of each window, of shape ``(k,)``.
+    covars : tuple of np.ndarray
+        Covariates of the asset of each window, each of shape ``(k,)``.
+    """
+
+    failures_count: onp.Array1D[np.float64]
+    start: onp.Array1D[np.float64]
+    end: onp.Array1D[np.float64]
+    covars: tuple[onp.Array1D[np.float64], ...]
+
+
+@dataclass(frozen=True)
+class NHPPData:
+    """Failure observations, as used by the likelihood of NHPP.
+
+    Built by ``validate_nhpp_data``.
+
+    Attributes
+    ----------
+    nb_covars : int
+        Number of covariates.
+    failures_time : np.ndarray
+        Failure times, of shape ``(n_failures,)``.
+    failures_covars : tuple of np.ndarray
+        Covariates of the asset of each failure, each of shape
+        ``(n_failures,)``.
+    observations_start : np.ndarray
+        Start of the observation window of each asset, of shape
+        ``(n_assets,)``.
+    observations_end : np.ndarray
+        End of the observation window of each asset, of shape ``(n_assets,)``.
+    observations_covars : tuple of np.ndarray
+        Covariates of each asset, each of shape ``(n_assets,)``.
+    partial_observations : PartialObservations or None
+        Numbers of failures observed per time window, if any.
+    """
+
+    nb_covars: int
+    failures_time: onp.Array1D[np.float64]
+    failures_covars: tuple[onp.Array1D[np.float64], ...]
+    observations_start: onp.Array1D[np.float64]
+    observations_end: onp.Array1D[np.float64]
+    observations_covars: tuple[onp.Array1D[np.float64], ...]
+    partial_observations: PartialObservations | None
+
+
+# Dataframe readers
+
+
+def _to_float_1d(df: nw.DataFrame[Any], name: str) -> onp.Array1D[np.float64]:
+    return df.get_column(name).to_numpy().astype(np.float64)
 
 
 def _read_dataframe(
@@ -58,19 +133,6 @@ def _join_assets(
         msg = f"Ids of {name} must be asset ids"
         raise ValueError(msg)
     return joined
-
-
-def _to_float_1d(df: nw.DataFrame[Any], name: str) -> onp.Array1D[np.float64]:
-    return df.get_column(name).to_numpy().astype(np.float64)
-
-
-class PartialObservations(NamedTuple):
-    """Numbers of events observed per time window, with their covariates."""
-
-    failures_count: onp.Array1D[np.float64]
-    start: onp.Array1D[np.float64]
-    end: onp.Array1D[np.float64]
-    covars: tuple[onp.Array1D[np.float64], ...]
 
 
 def _read_assets(assets: IntoDataFrame, covars: Sequence[str]) -> nw.DataFrame[Any]:
@@ -133,8 +195,9 @@ def _read_partial_observations(
     Raises
     ------
     ValueError
-        If ``0 <= start < end < inf`` does not hold, or ``count`` is not finite
-        and non-negative.
+        If ``0 <= start < end < inf`` does not hold, if a window is not within
+        the observation window of its asset, or if ``count`` is not finite and
+        non-negative.
     """
     name = "partial_observations"
     df = _join_assets(
@@ -145,6 +208,13 @@ def _read_partial_observations(
     start, end, count = (_to_float_1d(df, c) for c in ("start", "end", "count"))
     if np.any((start < 0) | ~np.isfinite(end) | (end <= start)):
         msg = "Partial observations must satisfy 0 <= 'start' < 'end' < inf"
+        raise ValueError(msg)
+    # NEW: the likelihood takes the -(chf(end) - chf(start)) term of each window
+    # from the observation window of its asset, so it must be inside it
+    if np.any(
+        (start < _to_float_1d(df, _ASSET_START)) | (end > _to_float_1d(df, _ASSET_END))
+    ):
+        msg = "Partial observations must be within their asset window"
         raise ValueError(msg)
     if np.any(~np.isfinite(count) | (count < 0)):
         msg = "'count' values must be finite and >= 0"
@@ -157,10 +227,17 @@ def _read_partial_observations(
     )
 
 
-class NHPPData:
-    """Observation schema for non-homogeneous Poisson processes.
+# Validation functions
 
-    Used to compute the likelihood.
+
+def validate_nhpp_data(
+    failures: IntoDataFrame,
+    assets: IntoDataFrame,
+    covar_column_names: Sequence[str] = (),
+    *,
+    partial_observations: IntoDataFrame | None = None,
+) -> NHPPData:
+    """Validate failure observations for non-homogeneous Poisson processes.
 
     Parameters
     ----------
@@ -182,6 +259,10 @@ class NHPPData:
         ``end``, the bounds of the time window as floats, and ``count``, the
         number of failures observed in the window. Other columns are ignored.
 
+    Returns
+    -------
+    NHPPData
+
     Raises
     ------
     TypeError
@@ -195,44 +276,27 @@ class NHPPData:
         ``start`` must be finite and non-negative, ``end`` finite and greater
         than ``start``, failure ``time`` within the observation window of its
         asset (``start < time <= end``), partial observations windows such
-        that ``0 <= start < end < inf``, ``count`` finite and non-negative, and
-        covariates finite.
+        that ``0 <= start < end < inf`` and within the observation window of
+        their asset, ``count`` finite and non-negative, and covariates finite.
     """
+    covars = list(covar_column_names)
+    reserved = sorted(set(covars) & _RESERVED_NAMES)
+    if reserved:
+        msg = f"Reserved names cannot be used as covariates: {reserved}"
+        raise ValueError(msg)
 
-    failures_time: onp.Array1D[np.float64]
-    failures_covars: tuple[onp.Array1D[np.float64], ...]
-    observations_start: onp.Array1D[np.float64]
-    observations_end: onp.Array1D[np.float64]
-    observations_covars: tuple[onp.Array1D[np.float64], ...]
-    nb_covars: int
-    partial_observations: PartialObservations | None
-
-    def __init__(
-        self,
-        failures: IntoDataFrame,
-        assets: IntoDataFrame,
-        *,
-        covar_column_names: Sequence[str] = (),
-        partial_observations: IntoDataFrame | None = None,
-    ) -> None:
-        covars = list(covar_column_names)
-        reserved = sorted(set(covars) & _RESERVED_NAMES)
-        if reserved:
-            msg = f"Reserved names cannot be used as covariates: {reserved}"
-            raise ValueError(msg)
-
-        assets_df = _read_assets(assets, covars)
-        self.observations_start = _to_float_1d(assets_df, _ASSET_START)
-        self.observations_end = _to_float_1d(assets_df, _ASSET_END)
-        self.observations_covars = tuple(_to_float_1d(assets_df, c) for c in covars)
-        self.nb_covars = len(covars)
-
-        failures_df = _read_failures(failures, assets_df)
-        self.failures_time = _to_float_1d(failures_df, "time")
-        self.failures_covars = tuple(_to_float_1d(failures_df, c) for c in covars)
-
-        self.partial_observations = (
+    assets_df = _read_assets(assets, covars)
+    failures_df = _read_failures(failures, assets_df)
+    return NHPPData(
+        nb_covars=len(covars),
+        failures_time=_to_float_1d(failures_df, "time"),
+        failures_covars=tuple(_to_float_1d(failures_df, c) for c in covars),
+        observations_start=_to_float_1d(assets_df, _ASSET_START),
+        observations_end=_to_float_1d(assets_df, _ASSET_END),
+        observations_covars=tuple(_to_float_1d(assets_df, c) for c in covars),
+        partial_observations=(
             None
             if partial_observations is None
             else _read_partial_observations(partial_observations, assets_df, covars)
-        )
+        ),
+    )

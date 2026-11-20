@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, final, override
 
 import numpy as np
 
-from ._datasets import NHPPData
+from ._datasets_validation import NHPPData
 from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,

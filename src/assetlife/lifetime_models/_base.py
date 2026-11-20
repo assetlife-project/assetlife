@@ -33,7 +33,7 @@ from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
-    from ._datasets import LifetimeData
+    from ._datasets_validation import LifetimeData
     from ._likelihoods import LifetimeLikelihood
 
 

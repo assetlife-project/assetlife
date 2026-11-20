@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self, override
 
-from ._datasets import NHPPData
+from ._datasets_validation import NHPPData, validate_nhpp_data
 from ._likelihoods import NHPPLikelihood
 from assetlife._optimization import FitConfig
 from assetlife.base import FittingResults, ParametricModel
@@ -232,7 +232,7 @@ class NonHomogeneousPoissonProcess[*CovarTs](ParametricModel):
         ... )
         """
         return self._fit(
-            NHPPData(
+            validate_nhpp_data(
                 failures,
                 assets,
                 covar_column_names=covar_column_names,

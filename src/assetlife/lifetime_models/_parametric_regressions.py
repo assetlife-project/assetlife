@@ -22,7 +22,7 @@ from ._base import (
     document_args,
 )
 from ._covar_effect import LinearCovarEffect
-from ._datasets import LifetimeData, observed_time
+from ._datasets_validation import LifetimeData, observed_time, validate_lifetime_data
 from ._distributions import (
     Gamma,
     LifetimeDistribution,
@@ -311,7 +311,7 @@ class ParametricLifetimeRegression(
             The fitted model. Estimated parameters are set in place.
         """
         return self._fit(
-            LifetimeData(
+            validate_lifetime_data(
                 dataset,
                 field_column_names=field_column_names,
                 covar_column_names=covar_column_names,

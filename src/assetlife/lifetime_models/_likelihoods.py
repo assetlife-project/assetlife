@@ -5,7 +5,7 @@ import optype.numpy as onp
 
 from ._base import FittableParametricLifetimeModel
 from ._covar_effect import LinearCovarEffect
-from ._datasets import CoxData, LifetimeData
+from ._datasets_validation import CoxData, LifetimeData
 from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
 from assetlife.typing import CoercibleFloat64_ND
 

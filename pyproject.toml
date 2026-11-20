@@ -119,6 +119,7 @@ ignore = [
   "D", # pydocstyle
   "missing-trailing-comma", # conflict with formatter
   "docstring-missing-returns", # pydoclint
+  "docstring-extraneous-exception", # pydoclint: misses exceptions raised by called helpers
   "raise-vanilla-args", # tryceratops
   "non-empty-init-module", # ruff
 ]

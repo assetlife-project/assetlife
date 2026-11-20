@@ -10,7 +10,8 @@ from scipy.optimize import Bounds
 from ._base import (
     FittableParametricLifetimeModel,
 )
-from ._likelihoods import LifetimeData, LifetimeLikelihood
+from ._datasets_validation import LifetimeData, validate_lifetime_data
+from ._likelihoods import LifetimeLikelihood
 from assetlife.typing import CoercibleFloat64_ND, CovarTs
 
 
@@ -199,7 +200,7 @@ class MinimumDistribution(FittableParametricLifetimeModel[*CovarTs]):
             The fitted model. Estimated parameters are set in place.
         """
         return self._fit(
-            LifetimeData(
+            validate_lifetime_data(
                 dataset,
                 field_column_names=field_column_names,
                 covar_column_names=covar_column_names,

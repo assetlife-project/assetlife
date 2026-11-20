@@ -8,7 +8,10 @@ from matplotlib.axes import Axes
 from narwhals.typing import IntoDataFrame
 from optype.numpy import Array1D
 
-from ._datasets import NonParametricData, read_complete_time
+from ._datasets_validation import (
+    validate_complete_time,
+    validate_non_parametric_data,
+)
 from assetlife.lifetime_models._base import _plot_probability_function
 
 
@@ -113,7 +116,7 @@ class ECDF(NonParametricLifetimeModel[Literal["sf", "cdf"]]):
         field_column_names: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__()
-        time = read_complete_time(dataset, field_column_names=field_column_names)
+        time = validate_complete_time(dataset, field_column_names=field_column_names)
         timeline, counts = np.unique(time, return_counts=True)
         timeline = np.insert(timeline, 0, 0)
         cdf = np.insert(np.cumsum(counts), 0, 0) / np.sum(counts)
@@ -210,7 +213,9 @@ class KaplanMeier(NonParametricLifetimeModel[Literal["sf"]]):
         field_column_names: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__()
-        data = NonParametricData(dataset, field_column_names=field_column_names)
+        data = validate_non_parametric_data(
+            dataset, field_column_names=field_column_names
+        )
         timeline, n, d = data.timeline, data.nb_at_risk, data.nb_failures
         sf = (1 - d / n).cumprod()
         # Greenwood terms, 0 where everyone at risk fails (sf is then 0)
@@ -304,7 +309,9 @@ class NelsonAalen(NonParametricLifetimeModel[Literal["chf"]]):
         field_column_names: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__()
-        data = NonParametricData(dataset, field_column_names=field_column_names)
+        data = validate_non_parametric_data(
+            dataset, field_column_names=field_column_names
+        )
         timeline, n, d = data.timeline, data.nb_at_risk, data.nb_failures
         chf = (d / n).cumsum()
         var = (d / n**2).cumsum()
