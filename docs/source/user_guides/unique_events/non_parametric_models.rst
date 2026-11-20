@@ -1,90 +1,172 @@
-Non-parametric lifetime models
-================================
+Censoring and truncation
+=========================
 
-Before fitting a parametric distribution, it's often useful to estimate the survival or
-hazard function directly from the data, without assuming any particular shape. AssetLife
-provides two censoring-aware estimators for this, Kaplan-Meier and Nelson-Aalen. Both take the ``event`` and
-``entry`` arguments and therefore account for right censoring and left truncation (see
-:doc:`censoring_and_truncation`).
+A lifetime model describes the duration until a single event of interest occurs. That event
+is often a failure, which is why failures are used as the running example on this page, but 
+everything below applies to any unique event you choose.
 
-Both estimators share the same idea. Index the units of the dataset by :math:`j`, so that
-unit :math:`j` is observed on :math:`[\textrm{entry}_j, \textrm{time}_j]`, and write
-:math:`t_1 < t_2 < \dots < t_n` for the ordered distinct observed times, :math:`d_i` for the
-number of failures recorded at :math:`t_i`, and :math:`n_i` for the number of units
-**at risk** just prior to :math:`t_i`, that is the units already entered and not yet failed
-or censored:
+Lifetime data is rarely a clean list of "the event occurred after :math:`t` units of time".
+The event might not have occurred when the study ends, monitoring starts after some assets
+have already been in service for a while, and dates are sometimes only approximately known.
+Any of these turns a simple "event at time :math:`t`" record into something less direct, and
+ignoring that distinction leads to systematically wrong estimates. AssetLife handles it
+through three columns of the dataset, ``time``, ``event`` and ``entry``.
 
-.. math::
+The observation scheme
+-------------------------
 
-    n_i = \#\{ j : \textrm{entry}_j \leq t_i \leq \textrm{time}_j \}
+For each asset, four dates matter: when the *observation window* starts (:math:`t_{start}`)
+and ends (:math:`t_{end}`), when the asset's lifetime starts (:math:`t_{init}`, typically its
+installation), and when the event occurred (if that was actually observed). In the figure
+below, the event is a failure, dated :math:`t_{fail}`, and six assets are lined up on the same
+calendar to show combinations that can occur:
 
-Censoring and truncation only enter through these two counts: a censored unit contributes to
-:math:`n_i` up to the time it was last seen but never to :math:`d_i`, and a left-truncated
-unit only starts contributing to :math:`n_i` once it enters the observation window.
+.. figure:: /_static/figures/observation_scheme.png
+    :alt: Observation scheme for six assets, showing complete observations, right-censoring, left-censoring, left-truncation and right-truncation.
+    :width: 100%
 
-Kaplan-Meier: survival function
----------------------------------------------------------
+    Observation scheme for six assets. A filled circle is an observed failure; an open circle
+    means the asset was still working when the observation window ended at :math:`t_{end}`
+    (**right-censoring**, assets 1 and 5); a left-pointing triangle means the asset was found
+    already broken, so it failed at a date that was never recorded, only known to be before
+    the inspection (**left-censoring**, asset 2); a right-pointing triangle before
+    :math:`t_{start}` means the asset was already installed before observation began
+    (**left-truncation**, assets 1, 2, 4 and 6); and the dashed line is an asset that had
+    already failed before :math:`t_{start}`, so it never appears in the data (asset 6).
 
-The Kaplan-Meier (product-limit) estimator reads each observed failure time as a conditional
-probability of surviving that instant, :math:`1 - d_i/n_i`, and multiplies them along the
-timeline:
+AssetLife's ``event``/``entry`` pair covers the two cases that dominate industrial asset data
+(right-censoring and left-truncation). The rarer cases, left-censoring (asset 2 above) and
+interval-censoring, are expressed by giving intervals instead of durations, see
+`Left censoring`_ and `Interval censoring`_.
 
-.. math::
+Right censoring
+----------------
 
-    \hat{S}(t) = \prod_{i: t_i \leq t} \left( 1 - \frac{d_i}{n_i}\right)
+An observation is **right-censored** when the actual event time is unknown: the event had
+not occurred yet the last time the asset was observed, so all we know is that its lifetime is
+*at least* ``time``. This is flagged with ``event`` set to ``False``, while ``True`` means
+the event was observed at ``time``.
 
-The estimate is a step function that drops only where a failure was actually observed and
-stays flat everywhere else, so censored units never push the curve down:
+The ``load_power_transformer`` dataset (see :doc:`datasets`), where the event is a failure,
+has both kinds of rows:
 
-.. plot::
-    :context: close-figs
+>>> import polars as pl
+>>> from assetlife.datasets import load_power_transformer
+>>> dataset = load_power_transformer()
+>>> dataset.columns
+['time', 'event', 'entry']
+>>> observed = dataset.filter(pl.col("event") & (pl.col("entry") == 0))
+>>> observed.head(2).rows()  # observed failures: (time, event, entry)
+[(12.4, True, 0.0), (12.6, True, 0.0)]
+>>> censored = dataset.filter(~pl.col("event") & (pl.col("entry") == 0))
+>>> censored.head(2).rows()  # still in service at "time"
+[(21.6, False, 0.0), (4.2, False, 0.0)]
 
-    >>> import matplotlib.pyplot as plt
-    >>> from assetlife.datasets import load_circuit_breaker
-    >>> from assetlife.lifetime_models import KaplanMeier
-    >>> dataset = load_circuit_breaker()
-    >>> km = KaplanMeier(dataset["time"], event=dataset["event"], entry=dataset["entry"])
-    >>> _ = km.plot("sf")
-    >>> _ = plt.xlabel("Time")
-    >>> _ = plt.ylabel("Estimated survival function")
-    >>> _ = plt.title("Kaplan-Meier")
-    >>> plt.show()
+Left truncation
+-----------------
 
-The shaded band is a 95% confidence interval. It widens along the timeline because fewer and
-fewer assets remain at risk, so the tail of the curve rests on very few observations. The curve
-drops to zero only if the longest observed time is an event, i.e. every asset still at risk at
-that age had the event. If the longest observed time is censored, the curve stops above zero: the
-oldest assets were last seen at that age without the event, and the estimator says nothing about
-survival beyond it.
+An observation is **left-truncated** when the asset had already reached some age without the
+event occurring before it was observed. For instance, monitoring only started once a
+transformer had already been in service for a while. This is captured with the ``entry`` column:
+the age at which the asset entered observation (``entry=0`` if it was observed from the start
+of its lifetime).
 
-Nelson-Aalen: cumulative hazard
-----------------------------------------------------------
+>>> truncated = dataset.filter(pl.col("event") & (pl.col("entry") > 0))
+>>> truncated.head(2).rows()
+[(34.3, True, 34.0), (45.1, True, 44.0)]
 
-The Nelson-Aalen estimator targets the cumulative hazard function :math:`H(t)` instead of
-the survival function. Where Kaplan-Meier multiplies survival probabilities, Nelson-Aalen 
-accumulates failure rates:
+Here, both transformers were already 34 and 44 (respectively) units old when they were
+first observed, and failed shortly after, at 34.3 and 45.1.
 
-.. math::
+Left truncation is also what accounts for the assets whose event occurred *before* the
+observation window opened (asset 6 above). Those are simply not in the data, and there is
+nothing to pass for them. Their absence is not neutral, though: the assets dropped this way may
+be the short-lived ones, so what remains in the window is a population that survived long
+enough to be seen. This is the survivor bias described in `Why getting this right matters`_
+below, and ``entry`` is what corrects it. The larger the observation window, the smaller this
+effect.
 
-    \hat{H}(t) = \sum_{i: t_i \leq t} \frac{d_i}{n_i}
+Left censoring
+----------------
 
-Being a sum of non-negative increments, the estimate increases with time. Its slope is the
-hazard rate: a steepening curve means the units are wearing out.
+An observation is **left-censored** when the asset was found already broken: it failed at a
+date that was never recorded, so all that is known is that its lifetime is *at most* the age
+at which the failure was noticed.
 
-.. plot::
-    :context: close-figs
+``event`` cannot express this, since it only distinguishes "event at ``time``" from "no event
+yet at ``time``". A left-censored observation is written as an interval whose lower bound is
+the start of the asset's lifetime, ``[0, b]``, see `Interval censoring`_.
 
-    >>> import matplotlib.pyplot as plt
-    >>> from assetlife.datasets import load_circuit_breaker
-    >>> from assetlife.lifetime_models import NelsonAalen
-    >>> dataset = load_circuit_breaker()
-    >>> na = NelsonAalen(dataset["time"], event=dataset["event"], entry=dataset["entry"])
-    >>> _ = na.plot("chf")
-    >>> _ = plt.xlabel("Time")
-    >>> _ = plt.ylabel("Estimated cumulative hazard")
-    >>> _ = plt.title("Nelson-Aalen")
-    >>> plt.show()
+Interval censoring
+--------------------
 
-These estimators are a good **sanity check** before committing to a parametric shape (see
-:doc:`distributions`): if a fitted distribution's survival curve strays far
-from the Kaplan-Meier estimate, that shape is probably a poor fit for the data.
+An observation is **interval-censored** when the event date is known to fall between two
+dates and no better than that, typically between two periodic inspections. Left censoring is
+the special case where the lower bound is the start of the asset's lifetime. Both are passed
+by giving the interval bounds in two columns, ``time_inf`` and ``time_sup``, instead of a
+``time`` column. Each row is then read as :math:`[a_i, b_i]`, the event being somewhere in
+between, and ``event`` must not be given:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 15 70
+
+    * - ``time_inf``
+      - ``time_sup``
+      - Meaning
+    * - ``t``
+      - ``t``
+      - event observed at ``t`` (complete observation)
+    * - ``a``
+      - ``b``
+      - event between ``a`` and ``b`` (interval censoring)
+    * - ``0``
+      - ``b``
+      - event before ``b``, exact date unknown (left censoring)
+    * - ``a``
+      - ``inf``
+      - no event yet at ``a`` (right censoring)
+
+The ``entry`` column still holds left truncation values, as for durations.
+
+Why getting this right matters
+---------------------------------
+
+Mishandling either one doesn't just add noise: it biases the result in a predictable
+direction, and the effect can be large. On a fleet of high-voltage assets, estimating
+a mean lifetime under three assumptions gives:
+
+.. figure:: /_static/figures/censoring_bias.png
+    :alt: Survival curves and mean lifetimes under three assumptions.
+    :width: 100%
+
+    Same dataset, three assumptions. Counting only
+    observed failures and ignoring the still-working assets (**mortality bias**) gives a mean
+    lifetime of 16 years. Accounting for right-censoring but ignoring left-truncation
+    (**survivor bias**) gives 46 years. Accounting for both gives 38 years: the correct
+    figure lies in between, not at either extreme.
+
+Ignoring censoring entirely (mortality bias) systematically *underestimates* lifetimes, since
+the (longer-lived) censored assets get discarded or miscounted as short-lived ones. Ignoring
+left-truncation (survivor bias) does the opposite: it *overestimates* lifetimes, because assets
+whose event occurred before observation are invisible to the sample, leaving only the assets
+that lasted long enough to be seen. This is exactly why every AssetLife lifetime model
+accounts for both directly in its likelihood.
+
+Fitting with censoring and truncation
+---------------------------------------
+
+Both are read by ``fit`` from the same dataset: AssetLife builds the correct likelihood
+contribution for each row depending on its ``event``/``entry`` combination:
+
+>>> from assetlife.lifetime_models import Weibull
+>>> weibull = Weibull().fit(dataset)
+>>> weibull.get_params()
+array([3.46597396, 0.0122785 ])
+
+Dropping ``entry`` (i.e. ignoring the left truncation) changes the fitted parameters, since
+the model is then implicitly assuming every asset was observed from the start of its lifetime:
+
+>>> weibull_no_truncation = Weibull().fit(dataset.drop("entry"))
+>>> weibull_no_truncation.get_params()
+array([4.11911713, 0.0122451 ])

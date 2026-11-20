@@ -34,11 +34,14 @@ Generate lifetimes from a renewal process
 >>> print(len(lifetime_sample.time))
 217
 
-The result is a named tuple of ``time``, ``event`` and ``entry``:
+The result is a named tuple of ``time``, ``event`` and ``entry`` arrays, which gives a dataframe
+to fit a model on:
 
+>>> import polars as pl
 >>> print(weibull.get_params())
 [7.   0.05]
->>> print(Weibull().fit(*lifetime_sample).get_params())
+>>> lifetime_data = pl.DataFrame(lifetime_sample._asdict())
+>>> print(Weibull().fit(lifetime_data).get_params())
 [7.61306357 0.0492674 ]
 
 To generate observations with different ``covar``, we can loop on
@@ -59,18 +62,17 @@ array(16.95257886)
 >>> lifetime_sample_1 = sample_lifetimes_from_renewal_process(
 ...     regression, 40, time_window=(20, 100), covar=(z1[1], z2[1])
 ... )
->>> time = np.concat([lifetime_sample_0.time, lifetime_sample_1.time])
->>> event = np.concat([lifetime_sample_0.event, lifetime_sample_1.event])
->>> entry = np.concat([lifetime_sample_0.entry, lifetime_sample_1.entry])
->>> z1 = np.array(
-...     [z1[0]] * len(lifetime_sample_0.time) + [z1[1]] * len(lifetime_sample_1.time)
-... )
->>> z2 = np.array(
-...     [z2[0]] * len(lifetime_sample_0.time) + [z2[1]] * len(lifetime_sample_1.time)
-... )
+>>> lifetime_data = pl.concat([
+...     pl.DataFrame(lifetime_sample_0._asdict()).with_columns(
+...         z1=pl.lit(z1[0]), z2=pl.lit(z2[0])
+...     ),
+...     pl.DataFrame(lifetime_sample_1._asdict()).with_columns(
+...         z1=pl.lit(z1[1]), z2=pl.lit(z2[1])
+...     ),
+... ])
 >>> print(
 ...     ParametricProportionalHazard(Weibull())
-...     .fit(time, covar=(z1, z2), event=event, entry=entry)
+...     .fit(lifetime_data, ["z1", "z2"])
 ...     .get_params()
 ... )  # doctest: +SKIP
 [-0.2125738  -0.12775181  6.87870376  0.05420681]

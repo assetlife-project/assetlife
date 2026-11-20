@@ -1,5 +1,5 @@
 Parametric regressions
-=============================================
+======================
 
 A distribution alone can't account for the fact that different assets operate under
 different conditions. Regressions extend a baseline distribution with covariates: for
@@ -7,7 +7,7 @@ instance, an insulator string's lifetime plausibly depends on the acid concentra
 exposed to (see :doc:`datasets`).
 
 Two parametric models
-------------------------------------------
+---------------------
 
 AssetLife offers two parametric ways of letting a covariate vector :math:`x` act on a baseline
 cumulative hazard :math:`H_0`. Proportional hazard scales the hazard,
@@ -29,7 +29,7 @@ hazard, so it **shortens** lifetimes. Under the accelerated failure time form, a
 coefficient slows the asset's aging, so it **lengthens** lifetimes.
 
 Standardizing the covariates
-------------------------------------------
+----------------------------
 
 AssetLife does not rescale covariates internally: each coefficient is expressed per unit of
 the covariate exactly as it is passed. Covariates measured on different scales therefore give
@@ -38,29 +38,27 @@ mean, divide by the standard deviation, as scikit-learn's ``StandardScaler`` doe
 covariate on the same scale:
 
 >>> import numpy as np
+>>> import polars as pl
 >>> from assetlife.datasets import load_insulator_string
 >>> insulator_data = load_insulator_string()
->>> names = ("pHCl", "pH2SO4", "HNO3")
+>>> names = ["pHCl", "pH2SO4", "HNO3"]
 >>> np.round([insulator_data[name].std() for name in names], 3)
 array([0.193, 0.086, 0.06 ])
->>> covar = [
-...     (insulator_data[name] - insulator_data[name].mean()) / insulator_data[name].std()
-...     for name in names
-... ]
+>>> standardized_data = insulator_data.with_columns(
+...     (pl.col(name) - pl.col(name).mean()) / pl.col(name).std() for name in names
+... )
 
 From now on, a one-unit change of a covariate means a change of one **standard deviation**:
 0.193 for ``pHCl``, 0.086 for ``pH2SO4`` and 0.06 for ``HNO3``.
 
 Fitting a regression
-------------------------------------------
+--------------------
 
-Both forms are fitted the same way, with the covariates passed alongside the lifetimes:
+Both forms are fitted the same way, with the names of the covariate columns passed after the
+dataset:
 
 >>> from assetlife.lifetime_models import Gompertz, ParametricProportionalHazard
->>> regression = ParametricProportionalHazard(Gompertz()).fit(
-...     insulator_data["time"], covar,
-...     event=insulator_data["event"], entry=insulator_data["entry"],
-... )
+>>> regression = ParametricProportionalHazard(Gompertz()).fit(standardized_data, names)
 >>> np.round(regression.get_params(), 3)
 array([ 0.794, -0.229,  0.195,  0.063,  0.029])
 
@@ -71,7 +69,7 @@ parameters. ``ParametricAcceleratedFailureTime`` takes the same arguments.
 .. _hazard_ratio:
 
 The hazard ratio
-------------------------------------------
+----------------
 
 Coefficients on the hazard scale are hard to read directly. Under the proportional hazard
 form, what is interpretable is the ratio of the hazard rates of two assets, because the
