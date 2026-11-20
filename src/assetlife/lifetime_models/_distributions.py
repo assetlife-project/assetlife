@@ -22,10 +22,9 @@ from ._base import (
     ParametricLifetimeModel,
     document_args,
 )
-from ._datasets_validation import LifetimeData, observed_time
+from ._datasets_validation import LifetimeData, observed_time, validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
 from assetlife._optimization import FitConfig
-from assetlife.lifetime_models._datasets_validation import validate_lifetime_data
 from assetlife.quadratures import (
     laguerre_quadrature,
 )
