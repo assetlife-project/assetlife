@@ -3,7 +3,7 @@ from collections.abc import Callable
 import numpy as np
 import optype.numpy as onp
 
-from assetlife.typing import CoercibleFloat64_ND, Float64_ND
+from assetlife._typing import CoercibleFloat64_ND, Float64_ND
 
 __all__ = [
     "laguerre_quadrature",

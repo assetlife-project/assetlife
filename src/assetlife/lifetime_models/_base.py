@@ -25,9 +25,9 @@ from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy import stats
 from scipy.optimize import Bounds, newton
 
-from assetlife.base import ParametricModel
-from assetlife.quadratures import legendre_quadrature, unweighted_laguerre_quadrature
-from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
+from assetlife._base import ParametricModel
+from assetlife._quadratures import legendre_quadrature, unweighted_laguerre_quadrature
+from assetlife._typing import CoercibleFloat64_ND, CovarTs, Float64_ND
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes

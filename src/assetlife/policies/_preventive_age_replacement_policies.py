@@ -10,9 +10,9 @@ import numpy as np
 from scipy.optimize import newton
 
 from ._base import BaseAgeReplacementPolicy, OneCycleExpectedCosts
+from assetlife._quadratures import legendre_quadrature
 from assetlife._rewards import exp_discounting_annuity_factor, exp_discounting_factor
 from assetlife.lifetime_models import ParametricLifetimeModel
-from assetlife.quadratures import legendre_quadrature
 from assetlife.stochastic_processes import (
     NonHomogeneousPoissonProcess,
     RenewalProcess,
@@ -22,7 +22,7 @@ from assetlife.stochastic_processes import (
 if TYPE_CHECKING:
     import optype.numpy as onp
 
-    from assetlife.typing import (
+    from assetlife._typing import (
         CoercibleFloat64_1D,
         Float64_1D,
         Timeline,

@@ -9,11 +9,11 @@ import numpy as np
 
 from ._datasets_validation import NHPPData
 from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
+from assetlife._typing import (
+    CoercibleFloat64_ND,
+)
 from assetlife.lifetime_models import (
     FittableParametricLifetimeModel,
-)
-from assetlife.typing import (
-    CoercibleFloat64_ND,
 )
 
 if TYPE_CHECKING:

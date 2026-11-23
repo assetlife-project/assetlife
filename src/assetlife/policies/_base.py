@@ -6,20 +6,20 @@ from typing import TypeVar, overload
 import numpy as np
 import optype.numpy as onp
 
+from assetlife._base import ParametricModel
 from assetlife._rewards import (
     compute_rewards,
     exp_discounting_annuity_factor,
     exp_discounting_factor,
 )
-from assetlife.base import ParametricModel
-from assetlife.lifetime_models import ParametricLifetimeModel
-from assetlife.typing import (
+from assetlife._typing import (
     CoercibleFloat64_1D,
     CoercibleFloat64_ND,
     Float64_1D,
     Float64_ND,
     Timeline,
 )
+from assetlife.lifetime_models import ParametricLifetimeModel
 
 
 class OneCycleExpectedCosts:

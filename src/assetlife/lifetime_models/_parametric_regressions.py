@@ -23,14 +23,14 @@ from ._base import (
 from ._covar_effect import LinearCovarEffect
 from ._datasets_validation import validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
-from assetlife.typing import CoercibleFloat64_ND
+from assetlife._typing import CoercibleFloat64_ND
 
 if TYPE_CHECKING:
     import optype.numpy as onp
     from narwhals.typing import IntoDataFrame
 
     from ._distributions import LifetimeDistribution
-    from assetlife.typing import Float64_ND
+    from assetlife._typing import Float64_ND
 
 
 _covar_docstring = [

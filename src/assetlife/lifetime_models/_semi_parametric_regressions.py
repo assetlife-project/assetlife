@@ -10,8 +10,8 @@ from narwhals.typing import IntoDataFrame
 from ._covar_effect import LinearCovarEffect
 from ._datasets_validation import CoxData, validate_cox_data
 from ._likelihoods import CoxPartialLifetimeLikelihood, _risk_set_sums
-from assetlife.base import FittingResults
-from assetlife.typing import CoercibleFloat64_1D
+from assetlife._base import FittingResults
+from assetlife._typing import CoercibleFloat64_1D
 
 
 class CoxEstimation(NamedTuple):

@@ -9,6 +9,7 @@ from scipy.optimize import approx_fprime
 from scipy.stats import boxcox, zscore
 
 from .utils import generate_shapes, shape_id
+from assetlife._typing import CoercibleFloat64_ND
 from assetlife.lifetime_models import (
     ParametricAcceleratedFailureTime,
     ParametricProportionalHazard,
@@ -20,7 +21,6 @@ from assetlife.lifetime_models._likelihoods import LifetimeLikelihood
 from assetlife.lifetime_models._parametric_regressions import (
     ParametricLifetimeRegression,
 )
-from assetlife.typing import CoercibleFloat64_ND
 
 type ST = int | float
 type NumpyST = np.floating | np.uint

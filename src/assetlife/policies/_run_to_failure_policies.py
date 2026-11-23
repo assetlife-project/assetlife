@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import numpy as np
     import optype.numpy as onp
 
-    from assetlife.typing import CoercibleFloat64_1D, Float64_1D, Timeline
+    from assetlife._typing import CoercibleFloat64_1D, Float64_1D, Timeline
 
 
 class OneCycleRunToFailurePolicy(BaseRunToFailurePolicy[ParametricLifetimeModel[()]]):

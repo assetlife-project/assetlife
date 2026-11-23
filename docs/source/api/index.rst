@@ -5,17 +5,6 @@ This section provides comprehensive details about the exposed AssetLife API.
 AssetLife is structured into different modules, each with a clear and specific role.
 We divided the API documentation close to the same logic.
 
-.. currentmodule:: assetlife.base
-
-.. autosummary::
-    :toctree: base_class
-    :template: class_template.rst
-    :caption: Base classes
-    :nosignatures:
-
-    ParametricModel
-    MaximumLikelihoodOptimizer
-
 Lifetime models
 ---------------
 

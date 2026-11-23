@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Self, override
 
 from ._datasets_validation import validate_nhpp_data
 from ._likelihoods import NHPPLikelihood
-from assetlife.base import FittingResults, ParametricModel
+from assetlife._base import FittingResults, ParametricModel
 from assetlife.lifetime_models import FittableParametricLifetimeModel
 
 if TYPE_CHECKING:
@@ -14,13 +14,13 @@ if TYPE_CHECKING:
 
     from narwhals.typing import IntoDataFrame
 
-    from assetlife.lifetime_models import (
-        ParametricLifetimeModel,
-    )
-    from assetlife.typing import (
+    from assetlife._typing import (
         CoercibleFloat64_ND,
         CovarTs,
         Float64_ND,
+    )
+    from assetlife.lifetime_models import (
+        ParametricLifetimeModel,
     )
 
 

@@ -5,8 +5,8 @@ from optype.numpy import ArrayND
 from scipy.optimize import newton
 
 from ._base import ParametricLifetimeModel
-from assetlife.quadratures import legendre_quadrature
-from assetlife.typing import CoercibleFloat64_ND, CovarTs
+from assetlife._quadratures import legendre_quadrature
+from assetlife._typing import CoercibleFloat64_ND, CovarTs
 
 
 @final

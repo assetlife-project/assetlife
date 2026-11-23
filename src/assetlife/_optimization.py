@@ -10,7 +10,7 @@ import numpy as np
 import optype.numpy as onp
 from scipy.optimize import Bounds, approx_fprime, minimize
 
-from assetlife.base import FittingResults, ParametricModel
+from assetlife._base import FittingResults, ParametricModel
 
 M = TypeVar("M", bound=ParametricModel)
 D = TypeVar("D")

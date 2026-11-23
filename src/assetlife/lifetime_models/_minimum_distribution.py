@@ -14,7 +14,7 @@ from ._base import (
 )
 from ._datasets_validation import validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
-from assetlife.typing import CoercibleFloat64_ND, CovarTs
+from assetlife._typing import CoercibleFloat64_ND, CovarTs
 
 
 @final

@@ -7,10 +7,10 @@ from numpy.testing import assert_allclose
 from scipy.optimize import approx_fprime
 
 from .utils import generate_shapes, shape_id
+from assetlife._typing import CoercibleFloat64_ND, Float64_ND
 from assetlife.lifetime_models import LifetimeDistribution
 from assetlife.lifetime_models._datasets_validation import validate_lifetime_data
 from assetlife.lifetime_models._likelihoods import LifetimeLikelihood
-from assetlife.typing import CoercibleFloat64_ND, Float64_ND
 
 
 @pytest.mark.parametrize(

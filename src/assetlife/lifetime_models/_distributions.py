@@ -25,7 +25,7 @@ from ._base import (
 )
 from ._datasets_validation import validate_lifetime_data
 from ._likelihoods import LifetimeLikelihood
-from assetlife.quadratures import (
+from assetlife._quadratures import (
     laguerre_quadrature,
 )
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     import optype.numpy as onp
     from narwhals.typing import IntoDataFrame
 
-    from assetlife.typing import CoercibleFloat64_ND, Float64_ND
+    from assetlife._typing import CoercibleFloat64_ND, Float64_ND
 
 
 class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):

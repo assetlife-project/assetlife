@@ -10,6 +10,7 @@ from ._iterators import (
     RenewalProcessIterator,
     RenewalRewardProcessIterator,
 )
+from assetlife._typing import CoercibleFloat64_1D, Seed
 from assetlife.stochastic_processes import (
     Kijima1Process,
     Kijima2Process,
@@ -17,7 +18,6 @@ from assetlife.stochastic_processes import (
     RenewalProcess,
     RenewalRewardProcess,
 )
-from assetlife.typing import CoercibleFloat64_1D, Seed
 
 
 @final

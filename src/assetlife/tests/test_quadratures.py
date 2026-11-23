@@ -5,8 +5,8 @@ import pytest
 from numpy.testing import assert_allclose
 from optype.numpy import Array1D, ArrayND
 
-from assetlife.quadratures import laguerre_quadrature, legendre_quadrature
-from assetlife.typing import CoercibleFloat64_ND, Float64_ND
+from assetlife._quadratures import laguerre_quadrature, legendre_quadrature
+from assetlife._typing import CoercibleFloat64_ND, Float64_ND
 
 M = 3  # nb assets
 N = 10  # nb points

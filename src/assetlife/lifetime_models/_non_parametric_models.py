@@ -8,11 +8,11 @@ from matplotlib.axes import Axes
 from narwhals.typing import IntoDataFrame
 from optype.numpy import Array1D
 
+from ._base import _plot_probability_function
 from ._datasets_validation import (
     validate_complete_time,
     validate_non_parametric_data,
 )
-from assetlife.lifetime_models._base import _plot_probability_function
 
 
 class NonParametricEstimation(NamedTuple):

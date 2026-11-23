@@ -14,7 +14,7 @@ from ._base import FittableParametricLifetimeModel
 from ._covar_effect import LinearCovarEffect
 from ._datasets_validation import CoxData, LifetimeData, observed_time
 from assetlife._optimization import FitConfig, MaximumLikelihoodOptimizer
-from assetlife.typing import CoercibleFloat64_ND
+from assetlife._typing import CoercibleFloat64_ND
 
 
 @final

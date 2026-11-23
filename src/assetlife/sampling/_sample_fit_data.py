@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 from optype.numpy import Array1D
 
+from ._iterables import RenewalProcessIterable
+from assetlife._typing import CoercibleFloat64_1D, Seed
 from assetlife.lifetime_models import LifetimeDistribution, ParametricLifetimeRegression
 from assetlife.lifetime_models._distributions import Exponential
-from assetlife.sampling._iterables import RenewalProcessIterable
 from assetlife.stochastic_processes import RenewalProcess
-from assetlife.typing import CoercibleFloat64_1D, Seed
 
 
 class LifetimeFitArgs(NamedTuple):

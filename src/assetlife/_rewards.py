@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from assetlife.typing import CoercibleFloat64_1D, CoercibleFloat64_ND, Float64_ND
+from assetlife._typing import CoercibleFloat64_1D, CoercibleFloat64_ND, Float64_ND
 
 
 def compute_rewards(

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from assetlife.base import ParametricModel
+from assetlife._base import ParametricModel
 
 
 class ModelA(ParametricModel):
