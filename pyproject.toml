@@ -75,6 +75,11 @@ dev = [
 [tool.setuptools.package-data]
 "assetlife.datasets.csv" = ["*.csv"]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["*.tests"] #  tests run from the repository, they are not shipped
+namespaces = false # only folders with an __init__.py are packages
+
 # taken from https://github.com/jorenham/optype
 # [based]pyright
 
