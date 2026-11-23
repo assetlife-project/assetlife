@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-import optype.numpy as onp
+import polars as pl
 import pytest
 
 from assetlife.datasets import load_insulator_string, load_power_transformer
@@ -17,12 +17,12 @@ from assetlife.lifetime_models import (
 
 
 @pytest.fixture
-def power_transformer_data() -> onp.Array1D[np.void]:
+def power_transformer_data() -> pl.DataFrame:
     return load_power_transformer()
 
 
 @pytest.fixture
-def insulator_string_data() -> onp.Array1D[np.void]:
+def insulator_string_data() -> pl.DataFrame:
     return load_insulator_string()
 
 

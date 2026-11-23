@@ -12,7 +12,7 @@ and inherits all its counters:
 >>> from assetlife.lifetime_models import Weibull
 >>> from assetlife.stochastic_processes import RenewalRewardProcess
 >>> dataset = load_circuit_breaker()
->>> weibull = Weibull().fit(time=dataset["time"], event=dataset["event"], entry=dataset["entry"])
+>>> weibull = Weibull().fit(dataset)
 >>> process = RenewalRewardProcess(lifetime_model=weibull)
 
 What is a reward?
@@ -145,9 +145,7 @@ is the figure used to compare strategies.
     >>> from assetlife.lifetime_models import Weibull
     >>> from assetlife.stochastic_processes import RenewalRewardProcess
     >>> dataset = load_circuit_breaker()
-    >>> weibull = Weibull().fit(
-    ...     time=dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ... )
+    >>> weibull = Weibull().fit(dataset)
     >>> process = RenewalRewardProcess(lifetime_model=weibull)
     >>> for label, costs in (
     ...     ("run to failure", {"cf": 11.}),

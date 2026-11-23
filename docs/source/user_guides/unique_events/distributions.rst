@@ -1,5 +1,5 @@
 Parametric distributions
-=============================================
+========================
 
 A parametric lifetime distribution assumes a fixed functional shape (Weibull, Gamma,
 Gompertz, ...) for the survival function, and estimates its parameters from data. Fitting
@@ -9,14 +9,14 @@ one is a single call, accounting for censoring and truncation as described in
 >>> from assetlife.datasets import load_circuit_breaker
 >>> from assetlife.lifetime_models import Weibull
 >>> dataset = load_circuit_breaker()
->>> weibull = Weibull().fit(dataset["time"], event=dataset["event"], entry=dataset["entry"])
+>>> weibull = Weibull().fit(dataset)
 >>> weibull.get_params()
 array([3.7267452 , 0.01232326])
 
 The two fitted values are the Weibull ``shape`` and ``rate``.
 
 Comparing candidate shapes
---------------------------------------------
+--------------------------
 
 Nothing in the data tells you which shape to assume, so fit several and look at them. The
 Kaplan-Meier estimator (see :doc:`non_parametric_models`) is the natural reference here: it
@@ -31,13 +31,11 @@ description of the data.
     >>> from assetlife.datasets import load_circuit_breaker
     >>> from assetlife.lifetime_models import KaplanMeier, Weibull, Gamma, Gompertz, LogLogistic
     >>> dataset = load_circuit_breaker()
-    >>> km = KaplanMeier(dataset["time"], event=dataset["event"], entry=dataset["entry"])
+    >>> km = KaplanMeier(dataset)
     >>> _ = km.plot("sf", ci=False, color="black", linestyle="--", label="Kaplan-Meier")
     >>> timeline = np.arange(0, 145)
     >>> for distribution in (Weibull(), Gamma(), Gompertz(), LogLogistic()):
-    ...     fitted = distribution.fit(
-    ...         dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ...     )
+    ...     fitted = distribution.fit(dataset)
     ...     _ = fitted.plot("sf", timeline, ci=False, label=type(fitted).__name__)
     >>> _ = plt.xlabel("Time")
     >>> _ = plt.ylabel("Estimated survival function")
@@ -55,7 +53,7 @@ parameters.
 .. _maximum_likelihood:
 
 Maximum likelihood
-------------------------------------------
+------------------
 
 Fitting maximizes the likelihood of the observed data under the chosen shape. Each row
 contributes a factor that depends on what was actually observed.
@@ -98,7 +96,7 @@ entered observation after birth. Right censoring is the interval case with
 how they are encoded in AssetLife (see :doc:`censoring_and_truncation`).
 
 Information criteria
-------------------------------------------
+--------------------
 
 The log-likelihood alone can't arbitrate between shapes with different numbers of
 parameters, since adding parameters can only improve the fit. Information criteria penalize
@@ -122,14 +120,14 @@ AICc          : 2493.72
 BIC           : 2506.41
 
 >>> from assetlife.lifetime_models import Gamma, Gompertz
->>> gamma = Gamma().fit(dataset["time"], event=dataset["event"], entry=dataset["entry"])
+>>> gamma = Gamma().fit(dataset)
 >>> print(gamma.fitting_results)
 fitted params : [5.57387, 0.0644293]
 AIC           : 2503.5
 AICc          : 2503.5
 BIC           : 2516.19
 
->>> gompertz = Gompertz().fit(dataset["time"], event=dataset["event"], entry=dataset["entry"])
+>>> gompertz = Gompertz().fit(dataset)
 >>> print(gompertz.fitting_results)
 fitted params : [0.00390781, 0.0757955]
 AIC           : 2485.57

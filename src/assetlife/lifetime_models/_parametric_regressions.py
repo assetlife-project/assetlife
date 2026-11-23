@@ -1,15 +1,14 @@
-"""Lifetime regression
+"""Parametric lifetime regressions.
 
-Notes
------
-This module contains two parametric lifetime regressions.
-ProportionalHazard is not Cox regression (Cox is semiparametric).
+Proportional hazard and accelerated failure time regressions, whose baseline
+is a lifetime distribution. For the semi-parametric Cox regression, see
+``SemiParametricProportionalHazard``.
 """
 
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Self, final, override
 
 import numpy as np
@@ -18,87 +17,20 @@ from scipy.optimize import Bounds
 
 from ._base import (
     FittableParametricLifetimeModel,
-    LifetimeData,
-    LifetimeLikelihood,
     ParametricLifetimeModel,
     document_args,
 )
-from ._distributions import (
-    Gamma,
-    LifetimeDistribution,
-)
-from assetlife.base import FitConfig, FittingResults, ParametricModel
+from ._covar_effect import LinearCovarEffect
+from ._datasets_validation import validate_lifetime_data
+from ._likelihoods import LifetimeLikelihood
 from assetlife.typing import CoercibleFloat64_ND
 
 if TYPE_CHECKING:
     import optype.numpy as onp
+    from narwhals.typing import IntoDataFrame
 
+    from ._distributions import LifetimeDistribution
     from assetlife.typing import Float64_ND
-
-
-class LinearCovarEffect(ParametricModel):
-    """
-    Covariates effect.
-
-    Parameters
-    ----------
-    coefficients : tuple of float, default is (None,)
-        Coefficients of the covariates effect.
-    """
-
-    def __init__(self, *coefficients: float | None) -> None:
-        super().__init__(*coefficients)
-
-    def g(self, *covar: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        Returns the covariates effect.
-
-        Parameters
-        ----------
-        covar : float or np.ndarray
-            The covariate values
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-
-        Raises
-        ------
-        ValueError
-            If the number of covariates differs from the number of coefficients.
-        """
-        nb_coef = self.get_params().size
-        if len(covar) != nb_coef:
-            msg = (
-                f"Invalid number of covar. Got {nb_coef} coefficients but "
-                f"{len(covar)} covariates are given."
-            )
-            raise ValueError(msg)
-        broadcasted_covar = np.broadcast_arrays(*covar)
-        stack_covar = np.stack(broadcasted_covar, axis=-1)
-        return np.exp(np.sum(stack_covar * self.get_params(), axis=-1))
-
-    def jac_g(self, *covar: CoercibleFloat64_ND) -> onp.ArrayND[np.float64]:
-        """
-        Returns the jacobian of the covariates effect.
-
-        Parameters
-        ----------
-        covar : float or np.ndarray
-            The covariate values
-
-        Returns
-        -------
-        out : np.ndarray
-        """
-        g = self.g(*covar)
-        broadcasted_covar = np.broadcast_arrays(*covar)
-        stack_covar = np.stack(broadcasted_covar, axis=0)
-        return stack_covar * g
-
-    @override
-    def __repr__(self) -> str:
-        return f"LinearCovarEffect({self.get_params().item()!r})"
 
 
 _covar_docstring = [
@@ -123,7 +55,6 @@ class ParametricLifetimeRegression(
 
     baseline: LifetimeDistribution
     covar_effect: LinearCovarEffect
-    fitting_results: FittingResults | None
 
     def __init__(
         self,
@@ -278,49 +209,28 @@ class ParametricLifetimeRegression(
         )
 
     @override
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
         param0 = np.zeros_like(self.get_params(), dtype=np.float64)
-        param0[-self.baseline.get_params().size :] = (
-            self.baseline.init_params_from_time(time)
-        )
+        param0[-self.baseline.get_params().size :] = self.baseline._init_params(time)  # ruff: ignore[private-member-access]
         return param0
 
     @override
-    def init_likelihood(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[onp.Array1D[np.float64]] | None = None,
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
-        **kwargs: Any,
-    ) -> LifetimeLikelihood:
-        assert args is not None
-        fresh_regression = type(self)(
-            type(self.baseline)(), coefficients=(0.0,) * len(args)
-        )  # init new regression object with appropriate number of covar
-        lifetime_data = LifetimeData(time, event, entry, args)
-        x0 = kwargs.get("x0", fresh_regression.init_params_from_time(time))
-        fresh_regression.set_params(x0)
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_regression.get_params_bounds()
-        )
-        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
-        config.covariance_method = kwargs.get(
-            "covariance_method",
-            "2point" if isinstance(fresh_regression.baseline, Gamma) else "cs",
-        )
-        return LifetimeLikelihood(fresh_regression, lifetime_data, config)
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        if nb_covars == 0:
+            msg = "Covariates must be given for fit when using a regression."
+            raise ValueError(msg)
+        self.covar_effect.set_params([0.0] * nb_covars)  # resize coefficients
+
+    @override
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:
+        return self.baseline._default_covariance_method()  # ruff: ignore[private-member-access]
 
     def fit(
         self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        covar: onp.Array1D[np.float64] | Sequence[onp.Array1D[np.float64]],
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
+        dataset: IntoDataFrame,
+        covar_column_names: Sequence[str],
+        *,
+        field_column_names: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -328,27 +238,33 @@ class ParametricLifetimeRegression(
 
         Parameters
         ----------
-        time : ndarray of shape (n_samples,) or (n_samples, 2)
-            Observed lifetimes.
+        dataset : DataFrame
+            Lifetime observations, one row per observation, as any eager dataframe
+            supported by narwhals (polars, pandas, pyarrow...). Lifetimes are given
+            either as:
 
-            - If 1D, each value is either a complete or a right-censored
-              lifetime. Use ``event`` to indicate which values are
-              right-censored.
-            - If 2D, each row encodes a lifetime as an interval
-              ``[lower, upper]``. A complete lifetime is encoded as ``[x, x]``,
-              a right-censored lifetime as ``[x, np.inf]``, a left-censored
-              lifetime as ``[0., x]``, and an interval-censored lifetime as
-              ``[a, b]``. In this format, ``event`` is ignored.
-        covar : ndarray of shape (n_samples, n_covariates) or sequence of 1D ndarray
-            Covariate values for each sample. If a sequence of 1D arrays is
-            given, each array holds the values of one covariate.
-        event : ndarray of shape (n_samples,) of bool, default None
-            Event indicators for 1D ``time``: ``True`` if the lifetime is
-            complete (failure observed), ``False`` if it is right-censored.
-            If None, all lifetimes are considered complete.
-        entry : ndarray of shape (n_samples,), default None
-            Left-truncation times, i.e. the age at which each sample entered
-            observation. If None, no left truncation is applied.
+            - a ``time`` column of floats: complete or right-censored lifetimes. An
+              optional ``event`` column of booleans tells whether each lifetime is a
+              failure (``True``) or right-censored (``False``). If ``event`` is
+              missing, all lifetimes are complete.
+            - ``time_inf`` and ``time_sup`` columns of floats: interval-censored
+              lifetimes ``[time_inf, time_sup]``. A complete lifetime is encoded as
+              ``time_inf == time_sup``, a right-censored lifetime as
+              ``[x, np.inf]`` and a left-censored lifetime as ``[entry, x]``. In
+              this format, ``event`` must not be given.
+
+            An optional ``entry`` column of floats holds left truncation values
+            (``0.`` if missing). Other columns are ignored, except covariates
+            selected with ``covar_column_names``.
+        covar_column_names : sequence of str
+            Names of the covariate columns in ``dataset``. Each covariate must
+            be a column of floats.
+        field_column_names : mapping of str to str, optional
+            Column name of each lifetime field in ``dataset``, as
+            ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
+            Fields are the lifetime variables ``"time"``, ``"time_inf"``,
+            ``"time_sup"``, ``"event"`` and ``"entry"``. Fields not given are looked
+            up under their own name.
         **kwargs
             Extra keyword arguments passed to `scipy.optimize.minimize
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
@@ -367,16 +283,10 @@ class ParametricLifetimeRegression(
         self : ParametricLifetimeRegression
             The fitted model. Estimated parameters are set in place.
         """
-        if not isinstance(covar, Sequence):
-            covar = (covar,)
-        optimizer = self.init_likelihood(
-            time, args=covar, event=event, entry=entry, **kwargs
+        data = validate_lifetime_data(
+            dataset, covar_column_names, field_column_names=field_column_names
         )
-        self.fitting_results = optimizer.optimize()
-        self.covar_effect.set_params([0.0] * len(covar))  # modify nb coef inplace
-        self.set_params(self.fitting_results.optimal_params)
-
-        return self
+        return LifetimeLikelihood.from_model(self, data, **kwargs).fit(self)
 
 
 @final
@@ -399,17 +309,18 @@ class ParametricProportionalHazard(ParametricLifetimeRegression):
 
     Parameters
     ----------
-    baseline : FittableParametricLifetimeModel
-        Any lifetime model that can be fitted.
-    coefficients : tuple of floats (values can be None), default is (None,)
-        Coefficients values of the covariate effects.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    coefficients : sequence of float, default ()
+        Coefficients of the covariates effect. Set to the number of
+        covariates when fitted.
 
     Attributes
     ----------
-    baseline : FittableParametricLifetimeModel
-        The regression baseline model (lifetime model).
-    covar_effect : _CovarEffect
-        The regression covariate effect.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    covar_effect : LinearCovarEffect
+        Covariates effect of the regression.
     fitting_results : FittingResults, default is None
         An object containing fitting results (AIC, BIC, etc.).
         If the model is not fitted, the value is None.
@@ -421,8 +332,8 @@ class ParametricProportionalHazard(ParametricLifetimeRegression):
 
     See Also
     --------
-    regression.AFT : Accelerated Failure Time regression.
-
+    ParametricAcceleratedFailureTime : Accelerated failure time regression.
+    SemiParametricProportionalHazard : Cox semi-parametric regression.
     """
 
     @override
@@ -528,17 +439,18 @@ class ParametricAcceleratedFailureTime(ParametricLifetimeRegression):
 
     Parameters
     ----------
-    baseline : FittableParametricLifetimeModel
-        Any lifetime model that can be fitted.
-    coefficients : tuple of floats (values can be None), default is (None,)
-        Coefficients values of the covariate effects.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    coefficients : sequence of float, default ()
+        Coefficients of the covariates effect. Set to the number of
+        covariates when fitted.
 
     Attributes
     ----------
-    baseline : FittableParametricLifetimeModel
-        The regression baseline model (lifetime model).
-    covar_effect : _CovarEffect
-        The regression covariate effect.
+    baseline : LifetimeDistribution
+        Lifetime distribution of the baseline.
+    covar_effect : LinearCovarEffect
+        Covariates effect of the regression.
     fitting_results : FittingResults, default is None
         An object containing fitting results (AIC, BIC, etc.).
         If the model is not fitted, the value is None.
@@ -550,7 +462,7 @@ class ParametricAcceleratedFailureTime(ParametricLifetimeRegression):
 
     See Also
     --------
-    regression.ProportionalHazard : proportional hazard regression
+    ParametricProportionalHazard : Proportional hazard regression.
     """
 
     @override

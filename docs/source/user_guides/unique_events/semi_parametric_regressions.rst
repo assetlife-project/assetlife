@@ -1,7 +1,7 @@
 .. _cox_model:
 
 Semi-parametric regressions
-==========================================
+===========================
 
 ``ParametricProportionalHazard`` (see :doc:`parametric_regressions`) requires a baseline shape, 
 and the coefficients absorb whatever the shape gets wrong. The Cox proportional hazard
@@ -9,21 +9,18 @@ model removes that assumption: it estimates the covariate effect while leaving t
 hazard entirely unspecified. Hence "semi-parametric": only the covariate part is parametric.
 
 Fitting the Cox model
-------------------------------------------
+---------------------
 
 >>> import numpy as np
+>>> import polars as pl
 >>> from assetlife.datasets import load_insulator_string
 >>> from assetlife.lifetime_models import SemiParametricProportionalHazard
 >>> insulator_data = load_insulator_string()
->>> names = ("pHCl", "pH2SO4", "HNO3")
->>> covar = [
-...     (insulator_data[name] - insulator_data[name].mean()) / insulator_data[name].std()
-...     for name in names
-... ]
->>> cox = SemiParametricProportionalHazard(
-...     time=insulator_data["time"], covar=covar,
-...     event=insulator_data["event"], entry=insulator_data["entry"],
+>>> names = ["pHCl", "pH2SO4", "HNO3"]
+>>> standardized_data = insulator_data.with_columns(
+...     (pl.col(name) - pl.col(name).mean()) / pl.col(name).std() for name in names
 ... )
+>>> cox = SemiParametricProportionalHazard(standardized_data, names)
 >>> np.round(cox.get_params(), 3)
 array([ 0.851, -0.255,  0.233])
 
@@ -54,7 +51,8 @@ The same story as the parametric fit: ``pHCl`` dominates, ``HNO3`` raises the fa
 The fitted model gives the survival function of an individual asset from its covariate values,
 here for the first two assets of the dataset:
 
->>> estimation = cox.sf(*(c[:2] for c in covar), se=False)
+>>> first_two = standardized_data.head(2)
+>>> estimation = cox.sf(*(first_two[name].to_numpy() for name in names), se=False)
 >>> timeline, sf_values = estimation.timeline, estimation.values
 >>> timeline[:3]
 array([1.1, 2.6, 3. ])
@@ -67,19 +65,16 @@ array([0.9997, 0.9994, 0.9991])
     :context: close-figs
 
     >>> import matplotlib.pyplot as plt
-    >>> import numpy as np
+    >>> import polars as pl
     >>> from assetlife.datasets import load_insulator_string
     >>> from assetlife.lifetime_models import SemiParametricProportionalHazard
-    >>> dataset = load_insulator_string()
-    >>> covar = [
-    ...     (dataset[name] - dataset[name].mean()) / dataset[name].std()
-    ...     for name in ("pHCl", "pH2SO4", "HNO3")
-    ... ]
-    >>> cox = SemiParametricProportionalHazard(
-    ...     time=dataset["time"], covar=covar,
-    ...     event=dataset["event"], entry=dataset["entry"],
+    >>> names = ["pHCl", "pH2SO4", "HNO3"]
+    >>> dataset = load_insulator_string().with_columns(
+    ...     (pl.col(name) - pl.col(name).mean()) / pl.col(name).std() for name in names
     ... )
-    >>> estimation = cox.sf(*(c[:2] for c in covar), se=False)
+    >>> cox = SemiParametricProportionalHazard(dataset, names)
+    >>> first_two = dataset.head(2)
+    >>> estimation = cox.sf(*(first_two[name].to_numpy() for name in names), se=False)
     >>> timeline, sf_values = estimation.timeline, estimation.values
     >>> _ = plt.plot(timeline, sf_values[0], label="asset 0")
     >>> _ = plt.plot(timeline, sf_values[1], label="asset 1")
@@ -92,7 +87,7 @@ The two assets shown here have different covariate values (different acid exposu
 the different estimated survival curves.
 
 The partial likelihood
-------------------------------------------
+----------------------
 
 The Cox model is not fitted on the full likelihood of the lifetimes, but on a *partial*
 likelihood that never involves the baseline hazard. The idea is to look at each observed

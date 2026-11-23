@@ -1,141 +1,108 @@
+"""Example lifetime datasets, loaded as polars dataframes."""
+
+from collections.abc import Sequence
 from pathlib import Path
 
-import numpy as np
-from numpy.typing import NDArray
+import polars as pl
+
+_CSV_DIR = Path(__file__).parent / "csv"
 
 
-def load_power_transformer() -> NDArray[np.void]:
+def _read_lifetime_csv(name: str, covars: Sequence[str] = ()) -> pl.DataFrame:
+    """Lifetime observations of ``csv/<name>.csv``, with ``event`` as booleans.
+
+    The files store ``event`` as numbers (``1``/``0``, ``1.0``/``0.0``), which
+    polars does not parse as booleans: it is read as floats, then cast.
+    """
+    schema = pl.Schema({
+        "time": pl.Float64(),
+        "event": pl.Float64(),
+        "entry": pl.Float64(),
+        **{covar: pl.Float64() for covar in covars},
+    })
+    return pl.read_csv(_CSV_DIR / f"{name}.csv", schema=schema).with_columns(
+        pl.col("event").cast(pl.Boolean)
+    )
+
+
+def load_power_transformer() -> pl.DataFrame:
     r"""
     Load example dataset of power transformers lifetimes.
+
+    Returns
+    -------
+    polars.DataFrame
+        One row per power transformer, with columns:
+
+        - ``time`` (``Float64``): observed lifetime values.
+        - ``event`` (``Boolean``): whether the failure is observed. If
+          ``False``, the lifetime is right-censored.
+        - ``entry`` (``Float64``): left truncation values.
 
     Examples
     --------
     >>> from assetlife.datasets import load_power_transformer
+    >>> from assetlife.lifetime_models import Weibull
     >>> data = load_power_transformer()
-    >>> print(data["time"])
-    [34.3 45.1 53.2 ... 30.  30.  30. ]
+    >>> data.columns
+    ['time', 'event', 'entry']
+    >>> model = Weibull().fit(data)
+    """
+
+    return _read_lifetime_csv("power_transformer")
+
+
+def load_insulator_string() -> pl.DataFrame:
+    r"""
+    Load example dataset of insulator string lifetimes with covariates.
 
     Returns
     -------
-    structured array
-        A numpy structured array of 3 fields :
+    polars.DataFrame
+        One row per insulator string, with columns:
 
-        - time (``np.float64``) : observed lifetime values
-        - event (``np.bool_``) : boolean flag indicated if the event has been
-          observed or not (if False, the observed lifetimes are right censored)
-        - entry (``np.float64``) : left truncation values
-
-    """
-
-    data = np.loadtxt(
-        Path(Path(__file__).parents[0], "csv/power_transformer.csv"),
-        delimiter=",",
-        skiprows=1,
-        dtype=np.dtype([
-            ("time", np.float64),
-            ("event", np.float64),
-            ("entry", np.float64),
-        ]),
-    )
-    # for some reason, numpy can't cast 1.0/0.0 to np.bool_
-    new_dtype = np.dtype([
-        ("time", np.float64),
-        ("event", np.bool_),
-        ("entry", np.float64),
-    ])
-    return data.astype(new_dtype)
-
-
-def load_insulator_string() -> NDArray[np.void]:
-    r"""
-    Load example dataset of insulator string lifetimes with covariates.
+        - ``time`` (``Float64``): observed lifetime values.
+        - ``event`` (``Boolean``): whether the failure is observed. If
+          ``False``, the lifetime is right-censored.
+        - ``entry`` (``Float64``): left truncation values.
+        - ``pHCl``, ``pH2SO4`` and ``HNO3`` (``Float64``): covariates, the
+          concentrations of pHCl, pH2SO4 and HNO3.
 
     Examples
     --------
     >>> from assetlife.datasets import load_insulator_string
+    >>> from assetlife.lifetime_models import ParametricProportionalHazard, Weibull
     >>> data = load_insulator_string()
-    >>> print(data["time"])
-    [70.  30.  45.  ...  8.8  7.6 53. ]
-    >>> print(data["pHCl"])
-    [0.49 0.76 0.43 ... 1.12 1.19 0.35]
+    >>> data.columns
+    ['time', 'event', 'entry', 'pHCl', 'pH2SO4', 'HNO3']
+    >>> model = ParametricProportionalHazard(Weibull()).fit(
+    ...     data, ["pHCl", "pH2SO4", "HNO3"]
+    ... )
+    """
+
+    return _read_lifetime_csv("insulator_string", ["pHCl", "pH2SO4", "HNO3"])
+
+
+def load_circuit_breaker() -> pl.DataFrame:
+    r"""
+    Load example dataset of circuit breaker lifetimes.
 
     Returns
     -------
-    structured array
-        A numpy structured array of 6 fields :
+    polars.DataFrame
+        One row per circuit breaker, with columns:
 
-        - time (``np.float64``) : observed lifetime values
-        - event (``np.bool_``) : boolean flag indicated if the event has been
-          observed or not (if False, the observed lifetimes are right censored)
-        - entry (``np.float64``) : left truncation values
-        - pHCl (``np.float64``) : quantitative covariate values (concentration of pHCl)
-        - pH2SO4 (``np.float64``) : quantitative covariate values (concentration of
-          pH2SO4)
-        - HNO3 (``np.float64``) : quantitative covariate values (concentration of HNO3)
-
-    """
-
-    data = np.loadtxt(
-        Path(Path(__file__).parents[0], "csv/insulator_string.csv"),
-        delimiter=",",
-        skiprows=1,
-        dtype=np.dtype([
-            ("time", np.float64),
-            ("event", np.float64),
-            ("entry", np.float64),
-            ("pHCl", np.float64),
-            ("pH2SO4", np.float64),
-            ("HNO3", np.float64),
-        ]),
-    )
-    # for some reason, numpy can't cast 1.0/0.0 to np.bool_
-    new_dtype = np.dtype([
-        ("time", np.float64),
-        ("event", np.bool_),
-        ("entry", np.float64),
-        ("pHCl", np.float64),
-        ("pH2SO4", np.float64),
-        ("HNO3", np.float64),
-    ])
-    return data.astype(new_dtype)
-
-
-def load_circuit_breaker() -> NDArray[np.void]:
-    r"""
-    Load example dataset of circuit breaker lifetimes.
+        - ``time`` (``Float64``): observed lifetime values.
+        - ``event`` (``Boolean``): whether the failure is observed. If
+          ``False``, the lifetime is right-censored.
+        - ``entry`` (``Float64``): left truncation values.
 
     Examples
     --------
     >>> from assetlife.datasets import load_circuit_breaker
     >>> data = load_circuit_breaker()
-    >>> print(data["time"])
-    [34. 28. 12. ... 42. 42. 37.]
-
-    Returns
-    -------
-    structured array
-        A numpy structured array of 3 fields :
-
-        - time (``np.float64``) : observed lifetime values
-        - event (``np.bool_``) : boolean flag indicated if the event has been
-          observed or not (if False, the observed lifetimes are right censored)
-        - entry (``np.float64``) : left truncation values
+    >>> data.columns
+    ['time', 'event', 'entry']
     """
 
-    data = np.loadtxt(
-        Path(Path(__file__).parents[0], "csv/circuit_breaker.csv"),
-        delimiter=",",
-        skiprows=1,
-        dtype=np.dtype([
-            ("time", np.float64),
-            ("event", np.float64),
-            ("entry", np.float64),
-        ]),
-    )
-    # for some reason, numpy can't cast 1.0/0.0 to np.bool_
-    new_dtype = np.dtype([
-        ("time", np.float64),
-        ("event", np.bool_),
-        ("entry", np.float64),
-    ])
-    return data.astype(new_dtype)
+    return _read_lifetime_csv("circuit_breaker")
