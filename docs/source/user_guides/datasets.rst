@@ -1,10 +1,10 @@
 Datasets
 ---------
 
-AssetLife contains three example datasets under ``assetlife.datasets``, all about
-power-grid equipment lifetime data. Each one is loaded as a NumPy `structured array
-<https://numpy.org/doc/stable/user/basics.rec.html>`_ with three fields (see
-:doc:`censoring_and_truncation` for what they mean):
+AssetLife contains four example datasets under ``assetlife.datasets``, all about power-grid
+equipment. Each one is loaded as a NumPy `structured array
+<https://numpy.org/doc/stable/user/basics.rec.html>`_. The first three are lifetime data, with
+three fields (see :doc:`unique_events/censoring_and_truncation` for what they mean):
 
 - ``time``: the observed lifetime values.
 - ``event``: whether the event actually happened inside the observation window
@@ -53,5 +53,27 @@ its tower while keeping it electrically isolated from it.
 
 This is the only dataset with covariates: ``pHCl``, ``pH2SO4`` and ``HNO3``, the acid concentrations 
 the insulators are exposed to, which may accelerate their degradation. Used for both the parametric 
-regression (:doc:`parametric_regressions`) and the semi-parametric Cox 
-model (:doc:`semi_parametric_regressions`).
+regression (:doc:`unique_events/parametric_regressions`) and the semi-parametric Cox
+model (:doc:`unique_events/semi_parametric_regressions`).
+
+SF6 refills of circuit breakers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The insulating gas of a circuit breaker can leak. The breaker is then refilled and put back 
+into service without being rejuvenated. Unlike the three datasets above, this one is not made of 
+lifetimes but of **repair histories**: the same breaker can be refilled several times over its 
+observation window.
+
+>>> from assetlife.datasets import load_gas_refill_circuit_breaker
+>>> dataset = load_gas_refill_circuit_breaker()
+>>> dataset.dtype.names
+('id_Eq', 'first_age', 'last_age', 'age_at_repair')
+>>> len(dataset)
+43520
+
+- ``id_Eq``: the equipment id.
+- ``first_age`` and ``last_age``: the ages of the breaker at the beginning and at the end of its
+  observation window.
+- ``age_at_repair``: the age of the breaker at the refill.
+
+It is used to fit a non-homogeneous Poisson process (:doc:`stochastic_processes/nhpp`).

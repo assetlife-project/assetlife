@@ -47,7 +47,7 @@ not occurred yet the last time the asset was observed, so all we know is that it
 *at least* ``time``. This is flagged with ``event=False``, while ``event=True`` means the
 event was observed at ``time``.
 
-The ``load_power_transformer`` dataset (see :doc:`datasets`), where the event is a failure,
+The ``load_power_transformer`` dataset (see :doc:`../datasets`), where the event is a failure,
 has both kinds of rows:
 
 >>> from assetlife.datasets import load_power_transformer

@@ -139,3 +139,46 @@ def load_circuit_breaker() -> NDArray[np.void]:
         ("entry", np.float64),
     ])
     return data.astype(new_dtype)
+
+
+def load_gas_refill_circuit_breaker() -> NDArray[np.void]:
+    r"""
+    Load example dataset of SF6 refills on circuit breakers.
+
+    Examples
+    --------
+    >>> from assetlife.datasets import load_gas_refill_circuit_breaker
+    >>> data = load_gas_refill_circuit_breaker()
+    >>> print(data["first_age"])
+    [34.  1. 42. ...  4.  4.  4.]
+    >>> print(data[3:7])
+    [(3, 42., 51.,    nan) (4, 42., 51., 43.088) (4, 42., 51., 47.37 )
+     (4, 42., 51., 49.325)]
+
+    Returns
+    -------
+    structured array
+        A numpy structured array of 4 fields, with one row per refill, or a
+        single row for an equipment without any refill:
+
+        - id_Eq (``np.int64``) : equipment id
+        - first_age (``np.float64``) : age at the beginning of the observation
+          window
+        - last_age (``np.float64``) : age at the end of the observation window
+        - age_at_repair (``np.float64``) : age at the refill, ``nan`` if the
+          equipment had no refill
+    """
+
+    # genfromtxt, unlike loadtxt, reads the empty age_at_repair field of
+    # equipments without refill as nan
+    return np.genfromtxt(
+        Path(Path(__file__).parents[0], "csv/gas_refill_circuit_breaker.csv"),
+        delimiter=",",
+        skip_header=1,
+        dtype=np.dtype([
+            ("id_Eq", np.int64),
+            ("first_age", np.float64),
+            ("last_age", np.float64),
+            ("age_at_repair", np.float64),
+        ]),
+    )

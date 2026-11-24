@@ -15,6 +15,7 @@ User guides
     :numbered:
 
     getting_started
+    datasets
     unique_events/index
     stochastic_processes/index
     maintenance_policies/index

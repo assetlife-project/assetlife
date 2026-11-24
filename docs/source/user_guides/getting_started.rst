@@ -36,7 +36,7 @@ Data collection
 ------------------
 
 AssetLife includes example datasets so you can get started without your own data (see
-:doc:`unique_events/datasets`). Here we use the *circuit breaker*
+:doc:`datasets`). Here we use the *circuit breaker*
 dataset.
 
 >>> from assetlife.datasets import load_circuit_breaker
@@ -53,8 +53,9 @@ See :doc:`unique_events/censoring_and_truncation`.
     The three fields above are what a **lifetime model** needs: one duration per asset, 
     plus what is known about the event and the observation window. 
     A **non-homogeneous Poisson process** is fitted on something else, the *sequence* of failure 
-    and repair dates observed on each asset, so a single asset contributes several records 
-    instead of one. 
+    and repair dates observed on each asset, so a single asset contributes several records
+    instead of one, as in the SF6 refills of circuit breakers
+    (``load_gas_refill_circuit_breaker``, see :doc:`datasets`).
     A **gamma process** would need deterioration measurements: a measured level and the date it was 
     measured, repeated over the asset's life.
 
@@ -184,9 +185,10 @@ these numbers come from.
     describes. When the asset is repaired instead, it is *as bad as old*, the decision becomes
     when to stop repairing and replace: 
     :py:class:`~assetlife.policies.RecurrentEventAgeReplacementPolicy` is built on a
-    non-homogeneous Poisson process rather than on a lifetime model. Each policy also comes in
-    a *renewal* variant, for planning a fleet over the long run, and a *one-cycle* variant, for
-    a decision about the asset currently in service. See :doc:`maintenance_policies/index`.
+    non-homogeneous Poisson process rather than on a lifetime model. Policies for unique events
+    also come in a *renewal* variant, for planning a fleet over the long run, and a *one-cycle*
+    variant, for a decision about the asset currently in service. See
+    :doc:`maintenance_policies/index`.
 
 .. _gs_consequences:
 
