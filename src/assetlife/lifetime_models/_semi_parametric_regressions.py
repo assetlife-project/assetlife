@@ -36,9 +36,9 @@ class SemiParametricProportionalHazard:
         h(t, x) = h_0(t) e^{\beta \cdot x}
 
     where the coefficients :math:`\beta` maximize the partial likelihood and
-    the baseline :math:`h_0` is estimated non-parametrically (Breslow). As the
-    model is semi-parametric, it is defined by its data: it is fitted when
-    instantiated.
+    the baseline :math:`h_0` is estimated non-parametrically (Breslow). Tied
+    event times are handled with Efron's approximation. As the model is
+    semi-parametric, it is defined by its data: it is fitted when instantiated.
 
     Parameters
     ----------

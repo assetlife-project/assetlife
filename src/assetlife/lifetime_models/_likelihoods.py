@@ -312,8 +312,9 @@ class CoxPartialLifetimeLikelihood(
 ):
     """Cox partial likelihood of the covariates effect, without tied event times.
 
-    Base class of the Breslow and Efron partial likelihoods. Use
-    ``from_model`` to get the likelihood handling the ties of the data.
+    Base class of the Breslow and Efron partial likelihoods. Use ``from_model``
+    to get the likelihood of a fit: it handles tied event times with Efron's
+    approximation.
     """
 
     model: LinearCovarEffect
@@ -341,13 +342,13 @@ class CoxPartialLifetimeLikelihood(
         model: LinearCovarEffect,
         data: CoxData,
         **kwargs: Any,
-    ) -> "CoxPartialLifetimeLikelihood":
+    ) -> "EfronPartialLifetimeLikelihood":
         """Partial likelihood of ``model`` given ``data``, handling the ties.
 
-        Efron if more than 3 failures share an event time, Breslow if at most 3
-        do and some pairs exist, the plain Cox partial likelihood otherwise.
-        The likelihood works on a copy of ``model``, so ``model`` is not changed
-        by the optimization.
+        Tied event times are handled with Efron's approximation, as in R's
+        ``survival`` and lifelines. Without ties, it equals the Cox partial
+        likelihood. The likelihood works on a copy of ``model``, so ``model`` is
+        not changed by the optimization.
 
         Parameters
         ----------
@@ -363,19 +364,13 @@ class CoxPartialLifetimeLikelihood(
 
         Returns
         -------
-        CoxPartialLifetimeLikelihood
-            Instance of the subclass handling the ties of ``data``.
+        EfronPartialLifetimeLikelihood
         """
         x0 = kwargs.get("x0", np.zeros(data.nb_covars, dtype=np.float64))
         config = FitConfig(x0)
         config.scipy_minimize_options["method"] = kwargs.get("method", "trust-exact")
         config.covariance_method = kwargs.get("covariance_method", "exact")
-        model = copy.deepcopy(model)
-        if (data.event_count > 3).any():
-            return EfronPartialLifetimeLikelihood(model, data, config)
-        if 2 in data.event_count:
-            return BreslowPartialLifetimeLikelihood(model, data, config)
-        return CoxPartialLifetimeLikelihood(model, data, config)
+        return EfronPartialLifetimeLikelihood(copy.deepcopy(model), data, config)
 
     @property
     @override
