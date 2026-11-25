@@ -69,7 +69,6 @@ from ._equilibrium_distribution import EquilibriumDistribution
 from ._minimum_distribution import MinimumDistribution
 from ._non_parametric_models import ECDF, KaplanMeier, NelsonAalen
 from ._parametric_regressions import (
-    LinearCovarEffect,
     ParametricAcceleratedFailureTime,
     ParametricLifetimeRegression,
     ParametricProportionalHazard,
@@ -93,7 +92,6 @@ __all__ += [
 __all__ += ["EquilibriumDistribution"]
 __all__ += ["MinimumDistribution"]
 __all__ += [
-    "LinearCovarEffect",
     "ParametricAcceleratedFailureTime",
     "ParametricLifetimeRegression",
     "ParametricProportionalHazard",

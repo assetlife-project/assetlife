@@ -65,7 +65,7 @@ class NHPPLikelihood(
     @classmethod
     def from_model(
         cls,
-        model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],
+        model: FittableParametricLifetimeModel[*tuple[Any, ...]],
         data: NHPPData,
         **kwargs: Any,
     ) -> Self:
