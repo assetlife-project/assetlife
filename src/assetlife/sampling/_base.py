@@ -20,8 +20,8 @@ from assetlife.stochastic_processes import (
 )
 
 if TYPE_CHECKING:
+    from assetlife._typing import CoercibleFloat64_1D, Seed
     from assetlife.lifetime_models import ParametricLifetimeModel
-    from assetlife.typing import CoercibleFloat64_1D, Seed
 
 
 class StochasticDataIterable[

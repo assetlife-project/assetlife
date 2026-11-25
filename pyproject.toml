@@ -1,6 +1,6 @@
 [project]
 name = "assetlife"
-version = "0.4.1"
+version = "0.5.0"
 description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
 readme = "README.md"
 authors = [{ name = "Thomas Guillon et al." }]
@@ -8,10 +8,11 @@ maintainers = [{ name = "AssetLife Developers" }]
 requires-python = ">=3.12"
 dependencies = [
   "matplotlib>=3.11.1",
+  "narwhals>=2.27.1",
   "numpy>=2.4.6",
   "numpydoc>=1.10.0",
   "optype[numpy]>=0.17.1",
-  "pandas>=2.3.3",
+  "polars>=2.1.0",
   "scipy>=1.17.1",
   "typing-extensions>=4.16.0",
 ]
@@ -52,14 +53,12 @@ lint = [
   "ruff>=0.16.6",
 ]
 test = [
-  "lifelines>=0.30.3",
   "pytest>=9.1.1",
 ]
 type = [
   "basedpyright>=1.40.0",
   "matplotlib-stubs>=0.3.11",
   "mypy>=2.3.1",
-  "pandas-stubs>=3.0.5.260914",
   "scipy-stubs>=1.17.1.5",
 ]
 dev = [
@@ -72,6 +71,11 @@ dev = [
 
 [tool.setuptools.package-data]
 "assetlife.datasets.csv" = ["*.csv"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["*.tests"] #  tests run from the repository, they are not shipped
+namespaces = false # only folders with an __init__.py are packages
 
 # taken from https://github.com/jorenham/optype
 # [based]pyright
@@ -117,6 +121,7 @@ ignore = [
   "D", # pydocstyle
   "missing-trailing-comma", # conflict with formatter
   "docstring-missing-returns", # pydoclint
+  "docstring-extraneous-exception", # pydoclint: misses exceptions raised by called helpers
   "raise-vanilla-args", # tryceratops
   "non-empty-init-module", # ruff
 ]

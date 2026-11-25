@@ -28,7 +28,7 @@ from assetlife.stochastic_processes import (
 if TYPE_CHECKING:
     import optype.numpy as onp
 
-    from assetlife.typing import CoercibleFloat64_1D, Seed
+    from assetlife._typing import CoercibleFloat64_1D, Seed
 
 
 class StochasticSample(NamedTuple):

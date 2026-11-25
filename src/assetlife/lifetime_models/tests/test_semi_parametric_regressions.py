@@ -1,11 +1,11 @@
 import numpy as np
+import polars as pl
 import pytest
-from optype.numpy import ArrayND
 
 from assetlife.lifetime_models import SemiParametricProportionalHazard
 
 
-def test_cox_params_eq(insulator_string_data: ArrayND[np.void]) -> None:
+def test_cox_params_eq(insulator_string_data: pl.DataFrame) -> None:
     # From manual experiment and comparison to lifelines results
     insulator_data_cox_params = np.array([5.08787802, -2.98553117, 4.51758019])
     timeline_head = np.array(
@@ -57,17 +57,14 @@ def test_cox_params_eq(insulator_string_data: ArrayND[np.void]) -> None:
         dtype=np.float64,
     )
 
-    covar = (
-        insulator_string_data["pHCl"],
-        insulator_string_data["pH2SO4"],
-        insulator_string_data["HNO3"],
-    )
+    covar_column_names = ["pHCl", "pH2SO4", "HNO3"]
+    # without left truncation, as in the lifelines comparison
     re_model = SemiParametricProportionalHazard(
-        time=insulator_string_data["time"],
-        covar=covar,
-        event=insulator_string_data["event"],
+        insulator_string_data.select("time", "event", *covar_column_names),
+        covar_column_names,
     )
-    sf_assetlife = re_model.sf(covar[0][:2], covar[1][:2], covar[2][:2], se=False)
+    covar = [insulator_string_data[name].to_numpy()[:2] for name in covar_column_names]
+    sf_assetlife = re_model.sf(*covar, se=False)
 
     assert re_model.get_params() == pytest.approx(insulator_data_cox_params, rel=1e-3)
     assert sf_assetlife[0][:19] == pytest.approx(timeline_head, rel=1e-3)

@@ -9,6 +9,7 @@ from numpy.lib import recfunctions as rfn
 
 from ._base import StochasticDataIterator
 from assetlife._rewards import compute_rewards, exp_discounting_factor
+from assetlife._typing import CoercibleFloat64_1D, Seed
 from assetlife.lifetime_models._base import (
     ParametricLifetimeModel,
 )
@@ -19,7 +20,6 @@ from assetlife.stochastic_processes import (
     RenewalProcess,
 )
 from assetlife.stochastic_processes._renewal_processes import RenewalRewardProcess
-from assetlife.typing import CoercibleFloat64_1D, Seed
 
 
 @final

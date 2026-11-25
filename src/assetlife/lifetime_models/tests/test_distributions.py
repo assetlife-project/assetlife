@@ -1,11 +1,16 @@
+import copy
+
 import numpy as np
-import optype.numpy as onp
+import polars as pl
 import pytest
 from numpy.testing import assert_allclose
+from scipy.optimize import approx_fprime
 
 from .utils import generate_shapes, shape_id
+from assetlife._typing import CoercibleFloat64_ND, Float64_ND
 from assetlife.lifetime_models import LifetimeDistribution
-from assetlife.typing import CoercibleFloat64_ND, Float64_ND
+from assetlife.lifetime_models._datasets_validation import validate_lifetime_data
+from assetlife.lifetime_models._likelihoods import LifetimeLikelihood
 
 
 @pytest.mark.parametrize(
@@ -122,40 +127,37 @@ def test_isf(distribution: LifetimeDistribution) -> None:
 
 def test_fit(
     distribution: LifetimeDistribution,
-    power_transformer_data: onp.Array1D[np.void],
+    power_transformer_data: pl.DataFrame,
 ) -> None:
-    expected_params = distribution.get_params().copy()
-    distribution = distribution.fit(
-        power_transformer_data["time"],
-        event=power_transformer_data["event"],
-        entry=power_transformer_data["entry"],
-    )
-    assert_allclose(distribution.get_params(), expected_params, rtol=1e-3)
+    # fit a copy: the fixture is shared with the other tests
+    fitted = copy.deepcopy(distribution).fit(power_transformer_data)
+    assert_allclose(fitted.get_params(), distribution.get_params(), rtol=1e-3)
 
 
 def test_negative_log(
     distribution: LifetimeDistribution,
-    power_transformer_data: onp.Array1D[np.void],
+    power_transformer_data: pl.DataFrame,
 ) -> None:
-    likelihood = distribution.init_likelihood(
-        power_transformer_data["time"],
-        event=power_transformer_data["event"],
-        entry=power_transformer_data["entry"],
+    likelihood = LifetimeLikelihood.from_model(
+        copy.deepcopy(distribution), validate_lifetime_data(power_transformer_data)
     )
     assert isinstance(likelihood.negative_log(distribution.get_params()), float)
 
 
 def test_jac_negative_log(
     distribution: LifetimeDistribution,
-    power_transformer_data: onp.Array1D[np.void],
+    power_transformer_data: pl.DataFrame,
 ) -> None:
-    likelihood = distribution.init_likelihood(
-        power_transformer_data["time"],
-        event=power_transformer_data["event"],
-        entry=power_transformer_data["entry"],
+    likelihood = LifetimeLikelihood.from_model(
+        copy.deepcopy(distribution), validate_lifetime_data(power_transformer_data)
     )
-    params = distribution.get_params()
-    assert likelihood.jac_negative_log(params).shape == (params.size,)
+    # away from the optimum, where the gradient is not close to 0
+    params = 1.1 * distribution.get_params()
+    assert_allclose(
+        likelihood.jac_negative_log(params),
+        approx_fprime(params, likelihood.negative_log, 1e-6 * params),
+        rtol=1e-3,
+    )
 
 
 @pytest.mark.parametrize(

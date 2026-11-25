@@ -12,7 +12,7 @@ lifetime model: this sequence of replacements is a **renewal process**.
 >>> from assetlife.lifetime_models import Weibull
 >>> from assetlife.stochastic_processes import RenewalProcess
 >>> dataset = load_circuit_breaker()
->>> weibull = Weibull().fit(time=dataset["time"], event=dataset["event"], entry=dataset["entry"])
+>>> weibull = Weibull().fit(dataset)
 >>> renewal_process = RenewalProcess(lifetime_model=weibull)
 
 The renewal function
@@ -137,9 +137,7 @@ the number of failures by 2.5.
     >>> from assetlife.lifetime_models import Weibull
     >>> from assetlife.stochastic_processes import RenewalProcess
     >>> dataset = load_circuit_breaker()
-    >>> weibull = Weibull().fit(
-    ...     time=dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ... )
+    >>> weibull = Weibull().fit(dataset)
     >>> renewal_process = RenewalProcess(lifetime_model=weibull)
     >>> timeline, m = renewal_process.renewal_function(tf=200., nb_steps=201)
     >>> _, m_ar = renewal_process.renewal_function(tf=200., nb_steps=201, ar=58.8)

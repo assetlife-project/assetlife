@@ -4,7 +4,9 @@ from importlib.metadata import PackageNotFoundError, version
 from . import (
     datasets,
     lifetime_models,
-    quadratures,
+    policies,
+    sampling,
+    stochastic_processes,
 )
 
 with suppress(PackageNotFoundError):
@@ -13,5 +15,7 @@ with suppress(PackageNotFoundError):
 __all__ = [
     "datasets",
     "lifetime_models",
-    "quadratures",
+    "policies",
+    "sampling",
+    "stochastic_processes",
 ]

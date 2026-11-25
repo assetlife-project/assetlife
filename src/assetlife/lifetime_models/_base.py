@@ -1,12 +1,11 @@
-"""Parametric lifetime model base classes and fitting utilities."""
+"""Parametric lifetime model base classes."""
 
 from __future__ import annotations
 
 import functools
 import inspect
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,7 +13,6 @@ from typing import (
     ParamSpec,
     TypeVar,
     cast,
-    final,
     no_type_check,
     overload,
     override,
@@ -27,9 +25,9 @@ from numpydoc import docscrape  # pyright: ignore[reportMissingTypeStubs]
 from scipy import stats
 from scipy.optimize import Bounds, newton
 
-from assetlife.base import FitConfig, MaximumLikelihoodOptimizer, ParametricModel
-from assetlife.quadratures import legendre_quadrature, unweighted_laguerre_quadrature
-from assetlife.typing import CoercibleFloat64_ND, CovarTs, Float64_ND
+from assetlife._base import ParametricModel
+from assetlife._quadratures import legendre_quadrature, unweighted_laguerre_quadrature
+from assetlife._typing import CoercibleFloat64_ND, CovarTs, Float64_ND
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -407,9 +405,17 @@ class ParametricLifetimeModel[*CovarTs](ParametricModel, ABC):
             An optional existing matplotlib.axes.
         **kwargs
             Extra arguments to configure the plot:
-                - ci : bool, default is True if the model has fitting_results
-                - alpha_ci :
-                - any arguments allowed by matplotlib.plot
+
+            - ci : bool, default is True if the model is fitted. Whether to
+              plot the confidence interval.
+            - alpha_ci : float, default is 0.95. Confidence level of the
+              interval.
+            - any arguments allowed by ``matplotlib.pyplot.plot``.
+
+        Returns
+        -------
+        out : plt.Axes
+            The axes the function is plotted on.
 
         Raises
         ------
@@ -651,13 +657,11 @@ class _AgeReplacementModel(ParametricLifetimeModel[*CovarTs]):
 
     Parameters
     ----------
-    baseline : any parametric lifetime model (frozen lifetime model works)
-        The base lifetime model without conditional probabilities
-
-    Attributes
-    ----------
-    baseline
-    ar
+    baseline : ParametricLifetimeModel
+        Lifetime model without conditional probabilities (a frozen model
+        works).
+    ar : float or np.ndarray
+        Ages of replacement.
     """
 
     baseline: ParametricLifetimeModel[*CovarTs]
@@ -758,17 +762,11 @@ class _LeftTruncatedModel(
 
     Parameters
     ----------
-    baseline : any parametric lifetime model (frozen lifetime model works)
-        The base lifetime model without conditional probabilities
-    nb_params
-    params
-    params_names
-    plot
-
-    Attributes
-    ----------
-    baseline
-    a0
+    baseline : ParametricLifetimeModel
+        Lifetime model without conditional probabilities (a frozen model
+        works).
+    a0 : float or np.ndarray
+        Ages already reached by the assets.
     """
 
     baseline: ParametricLifetimeModel[*CovarTs]
@@ -989,14 +987,32 @@ def estimate_se(
     time: onp.Array1D[np.float64],
     *args: *CovarTs,
 ) -> onp.Array1D[np.float64] | None:
-    """
+    """Standard errors of a function of a fitted model, by the delta method.
+
+    Parameters
+    ----------
+    model : ParametricLifetimeModel
+        Fitted model.
+    fname : str
+        Name of the function, e.g. ``"sf"``. ``model`` must have a
+        ``jac_<fname>`` method.
+    time : 1d array of floats
+        Timeline at which to compute the standard errors. The first value is
+        skipped and its standard error is set to 0.
+    *args
+        Any additional args.
+
+    Returns
+    -------
+    out : 1d array of floats or None
+        Standard errors at each time, or None if the model has no covariance
+        matrix.
 
     References
     ----------
     .. [1] Meeker, W. Q., Escobar, L. A., & Pascual, F. G. (2022).
         Statistical methods for reliability data. John Wiley & Sons.
-    """
-    # [1] equation B.10 in Appendix
+    """  # [1] equation B.10 in Appendix
     if (
         model.fitting_results is not None
         and model.fitting_results.covariance_matrix is not None
@@ -1016,14 +1032,22 @@ def estimate_se(
 
 
 class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
-    """Base class for parametric lifetime models that can be fitted."""
+    """Base class for parametric lifetime models that can be fitted.
+
+    Declares what fitting needs from a model: parameter bounds, jacobians,
+    initial parameters, adaptation to the number of covariates and a default
+    covariance method. The fitting itself is done by the likelihoods, built
+    with their ``from_model`` class method.
+    """
 
     @abstractmethod
     def get_params_bounds(self) -> Bounds:
-        """The optimization Bounds for each parameter to fit
+        """Bounds of the parameters, used by the optimizer.
 
-        Returns:
-            Bounds: Bounds of the parameters
+        Returns
+        -------
+        out : scipy.optimize.Bounds
+            Lower and upper bounds of each parameter.
         """
 
     @abstractmethod
@@ -1157,15 +1181,13 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         ) * self.hf(time, *args)
 
     @abstractmethod
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
-        """Init params with statistical heuristics from time data.
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+        """Init params with statistical heuristics from observed times.
 
-        Parameters:
-            time : 1d array of floats or 2d array of shape (n, 2)
-            Lifetimes to init from.
+        Parameters
+        ----------
+        time : 1d array of floats
+            Finite observed times to init from. Censoring is ignored.
 
         Returns
         -------
@@ -1174,321 +1196,29 @@ class FittableParametricLifetimeModel(ParametricLifetimeModel[*CovarTs], ABC):
         """
 
     @abstractmethod
-    def init_likelihood(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[onp.Array1D[np.float64]] | None = None,
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
-        **kwargs: Any,
-    ) -> LifetimeLikelihood:
-        r"""
-        Initialize the lifetime likelihood used to fit the parameters.
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        """Adapt the model, in place, to data with ``nb_covars`` covariates.
 
-        ``fit`` method is the preferred way to fit model parameters. However,
-        users can also interact with the likelihood returned by
-        ``init_likelihood`` to study the optimization process.
-
-        This method implementation is usually composed of 3 steps:
-            1. Initialize an object to store and preprocess lifetime values.
-            2. Create a ``FitConfig`` instance depending on the model needs.
-            3. Instantiate and return a ``LifetimeLikelihood``.
-
-        ``init_likelihood`` is separated from ``fit`` in order to reuse existing
-        likelihood parametrization in case of model composition. Any parameters
-        initialization needed by the likelihood optimizer (e.g. ``x0`` or
-        ``bounds`` as required in step 2.) are left to specific functions
-        alongside concrete model implementations. These functions are invoked
-        within ``init_likelihood``.
+        Called before fitting, as the number of parameters of some models (e.g.
+        regressions) depends on the number of covariates.
 
         Parameters
         ----------
-        time : 1d array or 2d array
-            Observed lifetime values. 1d array can handle complete and right censored
-            lifetimes with ``event``. To add left censored or interval censored
-            lifetimes, use 2d array.
-        args : any ndarray or tuple of ndarray, default is None
-            Additional arguments required by the model (e.g. covar).
-        event : 1d array of bool, default is None
-            Boolean indicators tagging lifetime values as right censored or complete.
-        entry : 1d array, default is None
-            Left truncations applied to lifetime values.
-        **kwargs
-            Extra arguments to control the parameters optimization. It can be:
+        nb_covars : int
+            Number of covariates of the data the model is fitted to.
 
-                - those used by `scipy.optimize.minimize
-                  <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
-                  to search for the parameters that minimize the negative
-                  log-likelihood.
-                - `covariance_method` to control the method used to estimate
-                  parameters covariance. Values can be `"cs"`, `"2point"`,
-                  `"exact"` or `False`. To skip parameters covariance
-                  estimation, set `covariance_method` to `False`, otherwise the
-                  default method associated to the model will be used. If
-                  `covariance_method` is `"exact"` the `hess` must be passed
-                  too.
+        Raises
+        ------
+        ValueError
+            If the model cannot be fitted with ``nb_covars`` covariates.
+        """
+
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:  # ruff: ignore[no-self-use]
+        """Covariance method used if ``covariance_method`` is not given to fit.
 
         Returns
         -------
-        out : LifetimeLikelihood instance
+        out : {"cs", "2point"}
+            ``"cs"`` (complex step) by default.
         """
-
-
-@dataclass
-class LifetimeData:
-    """Preprocessed lifetime observations used for likelihood computation."""
-
-    nb_observations: int = field(init=False)
-    complete_time: onp.Array[tuple[int, Literal[1]], np.float64] = field(
-        init=False, repr=False
-    )
-    censored_time: (
-        onp.Array[tuple[int, Literal[1]], np.float64]
-        | onp.Array[tuple[int, Literal[2]], np.float64]
-    ) = field(init=False, repr=False)
-    left_truncations: onp.Array[tuple[int, Literal[1]], np.float64] = field(
-        init=False, repr=False
-    )
-    complete_time_args: tuple[onp.Array[tuple[int, Literal[1]], np.float64], ...] = (
-        field(init=False, repr=False)
-    )
-    censored_time_args: tuple[onp.Array[tuple[int, Literal[1]], np.float64], ...] = (
-        field(init=False, repr=False)
-    )
-    left_truncations_args: tuple[onp.Array[tuple[int, Literal[1]], np.float64], ...] = (
-        field(init=False, repr=False)
-    )
-
-    def __init__(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
-        args: Sequence[onp.Array1D[np.float64]] = (),
-    ) -> None:
-        column_time = time[:, None]
-        if column_time.shape[-1] == 2 and event is not None:
-            msg = "If time is given as intervals, event must be None"
-            raise ValueError(msg)
-        column_event = None
-        if column_time.shape[-1] == 1:
-            column_event = (
-                event[:, None]
-                if event is not None
-                else np.ones_like(time, dtype=np.bool_)
-            )
-        column_entry = (
-            entry[:, None]
-            if entry is not None
-            else np.zeros(len(time), dtype=np.float64)
-        )
-        if np.any(column_time <= column_entry):
-            msg = "All time values must be greater than entry values"
-            raise ValueError(msg)
-        column_args = tuple(arg[:, None] for arg in args)
-        sizes = [
-            len(x)
-            for x in (column_time, column_event, column_entry, *column_args)
-            if x is not None
-        ]
-        if len(set(sizes)) != 1:
-            msg = (
-                "All lifetime data must have the same number of values. Fields "
-                f"length are different. Got {tuple(sizes)}"
-            )
-            raise ValueError(msg)
-        non_zero_entry = np.flatnonzero(column_entry)
-        if column_event is not None:
-            non_zero_event = np.flatnonzero(column_event)
-            zero_event = np.flatnonzero(column_event == 0)
-            self.nb_observations = len(time)
-            self.complete_time = column_time[non_zero_event]
-            self.censored_time = column_time[zero_event]
-            self.left_truncations = column_entry[non_zero_entry]
-            self.complete_time_args = tuple(arg[non_zero_event] for arg in column_args)
-            self.censored_time_args = tuple(arg[zero_event] for arg in column_args)
-            self.left_truncations_args = tuple(
-                arg[non_zero_entry] for arg in column_args
-            )
-        else:
-            complete_time_index = np.flatnonzero(column_time[:, 0] == column_time[:, 1])
-            non_complete_time_index = np.flatnonzero(
-                column_time[:, 0] != column_time[:, 1]
-            )
-            self.nb_observations = len(time)
-            self.complete_time = column_time[:, 1][complete_time_index]
-            self.censored_time = column_time[non_complete_time_index]
-            self.left_truncations = column_entry[non_zero_entry]
-            self.complete_time_args = tuple(
-                arg[complete_time_index] for arg in column_args
-            )
-            self.censored_time_args = tuple(
-                arg[non_complete_time_index] for arg in column_args
-            )
-            self.left_truncations_args = tuple(
-                arg[non_zero_entry] for arg in column_args
-            )
-
-
-@final
-class LifetimeLikelihood(
-    MaximumLikelihoodOptimizer[
-        FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]], LifetimeData
-    ]
-):
-    """
-    Maximum likelihood estimator from lifetime data.
-
-    Parameters
-    ----------
-    model : FittableParametricLifetimeModel
-        Model with initialized parameters.
-    data : LifetimeData
-        Preprocessed lifetime observations.
-    config : FitConfig
-        Configuration used by the optimizer.
-
-    Attributes
-    ----------
-    model : FittableParametricLifetimeModel
-        Model used by the likelihood.
-    data : LifetimeData
-        Preprocessed lifetime observations.
-    config : FitConfig
-        Configuration used by the optimizer.
-    """
-
-    data: LifetimeData
-
-    def __init__(
-        self,
-        model: FittableParametricLifetimeModel[*tuple[CoercibleFloat64_ND, ...]],
-        data: LifetimeData,
-        config: FitConfig,
-    ) -> None:
-        self.model = model
-        self.data = data
-        self.config = config
-        if "jac" not in self.config.scipy_minimize_options:
-            self.config.scipy_minimize_options["jac"] = self.jac_negative_log
-
-    @property
-    @override
-    def nb_observations(self) -> int:
-        return self.data.nb_observations
-
-    @override
-    def negative_log(self, params: onp.Array1D[np.float64]) -> float:
-        self.model.set_params(params)
-        return (
-            self._complete_time_contrib()
-            + self._censored_time_contrib()
-            + self._left_truncations_contrib()
-        )
-
-    def jac_negative_log(
-        self, params: onp.Array1D[np.float64]
-    ) -> onp.Array1D[np.float64]:
-        """
-        Jacobian of the negative log likelihood.
-
-        The Jacobian is computed with respect to parameters.
-
-        Parameters
-        ----------
-        params : 1d array of floats
-            Parameter values.
-
-        Returns
-        -------
-        out : 1d array of floats
-        """
-        self.model.set_params(params)
-        return (
-            self._jac_complete_time_contrib()
-            + self._jac_censored_time_contrib()
-            + self._jac_left_truncations_contrib()
-        )
-
-    def _complete_time_contrib(self) -> float:
-        if self.data.complete_time.size == 0:
-            return 0.0
-        return -np.sum(
-            np.log(
-                self.model.pdf(self.data.complete_time, *self.data.complete_time_args)
-            )
-        )
-
-    def _jac_complete_time_contrib(self) -> onp.ArrayND[np.float64]:
-        if self.data.complete_time.size == 0:
-            return np.zeros_like(self.model.get_params())
-        jac = -self.model.jac_pdf(
-            self.data.complete_time, *self.data.complete_time_args
-        ) / self.model.pdf(self.data.complete_time, *self.data.complete_time_args)
-
-        return np.sum(jac, axis=(1, 2))
-
-    def _censored_time_contrib(self) -> float:
-        if self.data.censored_time.size == 0:
-            return 0.0
-        if self.data.censored_time.shape[-1] > 1:
-            # interval censored time
-            return np.sum(
-                -np.log(
-                    10**-10
-                    + self.model.cdf(
-                        self.data.censored_time[:, 1], *self.data.censored_time_args
-                    )
-                    - self.model.cdf(
-                        self.data.censored_time[:, 0], *self.data.censored_time_args
-                    )
-                ),
-            )
-        # right censored time
-        return np.sum(
-            self.model.chf(self.data.censored_time, *self.data.censored_time_args)
-        )
-
-    def _jac_censored_time_contrib(self) -> onp.ArrayND[np.float64]:
-        if self.data.censored_time.size == 0:
-            return np.zeros_like(self.model.get_params())
-        if self.data.censored_time.shape[-1] > 1:
-            # interval censored time
-            jac_interval_censored = (
-                self.model.jac_sf(
-                    self.data.censored_time[:, 1], *self.data.censored_time_args
-                )
-                - self.model.jac_sf(
-                    self.data.censored_time[:, 0], *self.data.censored_time_args
-                )
-            ) / (
-                10**-10
-                + self.model.cdf(
-                    self.data.censored_time[:, 1], *self.data.censored_time_args
-                )
-                - self.model.cdf(
-                    self.data.censored_time[:, 0], *self.data.censored_time_args
-                )
-            )
-
-            return np.sum(jac_interval_censored, axis=(1, 2))
-        # right censored time
-        return np.sum(
-            self.model.jac_chf(self.data.censored_time, *self.data.censored_time_args),
-            axis=(1, 2),
-        )
-
-    def _left_truncations_contrib(self) -> float:
-        if self.data.left_truncations.size == 0:
-            return 0.0
-        return -np.sum(
-            self.model.chf(self.data.left_truncations, *self.data.left_truncations_args)
-        )
-
-    def _jac_left_truncations_contrib(self) -> onp.ArrayND[np.float64]:
-        if self.data.left_truncations.size == 0:
-            return np.zeros_like(self.model.get_params())
-        jac = -self.model.jac_chf(
-            self.data.left_truncations, *self.data.left_truncations_args
-        )
-        return np.sum(jac, axis=(1, 2))
+        return "cs"

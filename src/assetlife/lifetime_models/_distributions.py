@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -20,28 +20,26 @@ from scipy.special import digamma, exp1, gamma, gammaincc, gammainccinv
 
 from ._base import (
     FittableParametricLifetimeModel,
-    LifetimeData,
-    LifetimeLikelihood,
     ParametricLifetimeModel,
     document_args,
 )
-from assetlife.base import FitConfig, FittingResults
-from assetlife.quadratures import (
+from ._datasets_validation import validate_lifetime_data
+from ._likelihoods import LifetimeLikelihood
+from assetlife._quadratures import (
     laguerre_quadrature,
 )
 
 if TYPE_CHECKING:
     import optype.numpy as onp
+    from narwhals.typing import IntoDataFrame
 
-    from assetlife.typing import CoercibleFloat64_ND, Float64_ND
+    from assetlife._typing import CoercibleFloat64_ND, Float64_ND
 
 
 class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
     """
     Base class for distribution model.
     """
-
-    fitting_results: FittingResults | None
 
     @override
     def get_params_bounds(self) -> Bounds:
@@ -133,45 +131,22 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
         )
 
     @override
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
-        # flatten in case of 2D time
-        flatten_time = time.flatten()
-        nb_params = self.get_params().size
-        param0 = np.ones(nb_params, dtype=np.float64)
-        param0[-1] = 1 / np.median(flatten_time)
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+        param0 = np.ones(self.get_params().size, dtype=np.float64)
+        param0[-1] = 1 / np.median(time)
         return param0
 
     @override
-    def init_likelihood(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        args: Sequence[onp.Array1D[np.float64]] | None = None,
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
-        **kwargs: Any,
-    ) -> LifetimeLikelihood:
-        assert args is None
-        lifetime_data = LifetimeData(time, event=event, entry=entry)
-        fresh_distrib = type(self)()
-        x0 = kwargs.get("x0", fresh_distrib.init_params_from_time(time))
-        config = FitConfig(x0)
-        config.scipy_minimize_options["bounds"] = kwargs.get(
-            "bounds", fresh_distrib.get_params_bounds()
-        )
-        config.scipy_minimize_options["method"] = kwargs.get("method", "L-BFGS-B")
-        config.covariance_method = kwargs.get(
-            "covariance_method", "2point" if isinstance(fresh_distrib, Gamma) else "cs"
-        )
-        return LifetimeLikelihood(fresh_distrib, lifetime_data, config)
+    def _set_nb_covars(self, nb_covars: int) -> None:
+        if nb_covars > 0:
+            msg = "No covariates can be given for fit when using a distribution."
+            raise ValueError(msg)
 
     def fit(
         self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-        event: onp.Array1D[np.bool_] | None = None,
-        entry: onp.Array1D[np.float64] | None = None,
+        dataset: IntoDataFrame,
+        *,
+        field_column_names: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -179,24 +154,29 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
 
         Parameters
         ----------
-        time : ndarray of shape (n_samples,) or (n_samples, 2)
-            Observed lifetimes.
+        dataset : DataFrame
+            Lifetime observations, one row per observation, as any eager dataframe
+            supported by narwhals (polars, pandas, pyarrow...). Lifetimes are given
+            either as:
 
-            - If 1D, each value is either a complete or a right-censored
-              lifetime. Use ``event`` to indicate which values are
-              right-censored.
-            - If 2D, each row encodes a lifetime as an interval
-              ``[lower, upper]``. A complete lifetime is encoded as ``[x, x]``,
-              a right-censored lifetime as ``[x, np.inf]``, a left-censored
-              lifetime as ``[0., x]``, and an interval-censored lifetime as
-              ``[a, b]``. In this format, ``event`` is ignored.
-        event : ndarray of shape (n_samples,) of bool, default None
-            Event indicators for 1D ``time``: ``True`` if the lifetime is
-            complete (failure observed), ``False`` if it is right-censored.
-            If None, all lifetimes are considered complete.
-        entry : ndarray of shape (n_samples,), default None
-            Left-truncation times, i.e. the age at which each sample entered
-            observation. If None, no left truncation is applied.
+            - a ``time`` column of floats: complete or right-censored lifetimes. An
+              optional ``event`` column of booleans tells whether each lifetime is a
+              failure (``True``) or right-censored (``False``). If ``event`` is
+              missing, all lifetimes are complete.
+            - ``time_inf`` and ``time_sup`` columns of floats: interval-censored
+              lifetimes ``[time_inf, time_sup]``. A complete lifetime is encoded as
+              ``time_inf == time_sup``, a right-censored lifetime as
+              ``[x, np.inf]`` and a left-censored lifetime as ``[entry, x]``. In
+              this format, ``event`` must not be given.
+
+            An optional ``entry`` column of floats holds left truncation values
+            (``0.`` if missing).
+        field_column_names : mapping of str to str, optional
+            Column name of each lifetime field in ``dataset``, as
+            ``{field: column_name}``, e.g. ``{"time": "duration", "event": "failed"}``.
+            Fields are the lifetime variables ``"time"``, ``"time_inf"``,
+            ``"time_sup"``, ``"event"`` and ``"entry"``. Fields not given are looked
+            up under their own name.
         **kwargs
             Extra keyword arguments passed to `scipy.optimize.minimize
             <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
@@ -212,14 +192,11 @@ class LifetimeDistribution(FittableParametricLifetimeModel[()], ABC):
 
         Returns
         -------
-        self : ParametricLifetimeRegression
+        self : LifetimeDistribution
             The fitted model. Estimated parameters are set in place.
         """
-        optimizer = self.init_likelihood(time, event=event, entry=entry, **kwargs)
-        self.fitting_results = optimizer.optimize()
-        self.set_params(self.fitting_results.optimal_params)
-
-        return self
+        data = validate_lifetime_data(dataset, field_column_names=field_column_names)
+        return LifetimeLikelihood.from_model(self, data, **kwargs).fit(self)
 
 
 @final
@@ -332,16 +309,6 @@ class Exponential(LifetimeDistribution):
         returns=[docscrape.Parameter("out", "np.float64", [""])],
     )
     def mrl(self, time: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        The mean residual life function.
-
-        Here, the exact mean residual life is computed.
-        Otherwise, `assetlife.lifetime_model.mrl` function.
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-        """
         return 1 / self.get_params()[0] * np.ones_like(time)
 
     @override
@@ -378,12 +345,6 @@ class Weibull(LifetimeDistribution):
     fitting_results : FittingResults, default is None
         An object containing fitting results (AIC, BIC, etc.).
         If the model is not fitted, the value is None.
-    nb_params
-    params
-    params_names
-    plot
-    shape
-    rate
     """
 
     def __init__(self, shape: float | None = None, rate: float | None = None) -> None:
@@ -476,16 +437,6 @@ class Weibull(LifetimeDistribution):
         returns=[docscrape.Parameter("out", "np.float64", [""])],
     )
     def mrl(self, time: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        The mean residual life function.
-
-        Here, the exact mean residual life is computed.
-        Otherwise, `assetlife.lifetime_model.mrl` function.
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-        """
         shape, rate = self.get_params()
         return (
             gamma(1 / shape)
@@ -625,16 +576,6 @@ class Gompertz(LifetimeDistribution):
         returns=[docscrape.Parameter("out", "np.float64", [""])],
     )
     def mrl(self, time: CoercibleFloat64_ND) -> Float64_ND:
-        """
-        The mean residual life function.
-
-        Here, the exact mean residual life is computed.
-        Otherwise, `assetlife.lifetime_model.mrl` function.
-
-        Returns
-        -------
-        out : np.float64 or np.ndarray
-        """
         shape, rate = self.get_params()
         z = shape * np.exp(rate * time)
         return np.exp(z) * exp1(z) / rate
@@ -645,19 +586,10 @@ class Gompertz(LifetimeDistribution):
         return f"Gompertz(shape={params[0].item()!r}, rate={params[1].item()!r})"
 
     @override
-    def init_params_from_time(
-        self,
-        time: onp.Array1D[np.float64] | onp.Array[tuple[int, Literal[2]], np.float64],
-    ) -> onp.Array1D[np.float64]:
-        # flatten in case of 2D time
-        flatten_time = time.flatten()
-        nb_params = self.get_params().size
-        param0 = np.empty(nb_params, dtype=np.float64)
-        rate = np.pi / (np.sqrt(6) * np.std(flatten_time))
-        shape = np.exp(-rate * np.mean(flatten_time))
-        param0[0] = shape
-        param0[1] = rate
-        return param0
+    def _init_params(self, time: onp.Array1D[np.float64]) -> onp.Array1D[np.float64]:
+        rate = np.pi / (np.sqrt(6) * np.std(time))
+        shape = np.exp(-rate * np.mean(time))
+        return np.array([shape, rate], dtype=np.float64)
 
 
 @final
@@ -809,6 +741,11 @@ class Gamma(LifetimeDistribution):
     def __repr__(self) -> str:
         params = self.get_params()
         return f"Gamma(shape={params[0].item()!r}, rate={params[1].item()!r})"
+
+    @override
+    def _default_covariance_method(self) -> Literal["cs", "2point"]:
+        # complex step is not supported by scipy incomplete gamma functions
+        return "2point"
 
 
 @final

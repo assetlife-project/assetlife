@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from assetlife.base import ParametricModel
+from assetlife._base import ParametricModel
 
 if TYPE_CHECKING:
+    from assetlife._typing import CovarTs
     from assetlife.lifetime_models import ParametricLifetimeModel
-    from assetlife.typing import CovarTs
 
 
 class Kijima1Process[*CovarTs](ParametricModel):

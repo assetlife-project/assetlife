@@ -41,8 +41,8 @@ dataset.
 
 >>> from assetlife.datasets import load_circuit_breaker
 >>> dataset = load_circuit_breaker()
->>> dataset.dtype.names
-('time', 'event', 'entry')
+>>> dataset.columns
+['time', 'event', 'entry']
 
 This dataset includes censoring and truncation that are not details to be cleaned away. 
 They carry information, and most AssetLife estimators account for them. 
@@ -50,7 +50,7 @@ See :doc:`unique_events/censoring_and_truncation`.
 
 .. note::
 
-    The three fields above are what a **lifetime model** needs: one duration per asset, 
+    The three columns above are what a **lifetime model** needs: one duration per asset, 
     plus what is known about the event and the observation window. 
     A **non-homogeneous Poisson process** is fitted on something else, the *sequence* of failure 
     and repair dates observed on each asset, so a single asset contributes several records 
@@ -68,9 +68,7 @@ The Kaplan-Meier estimator is a step function that drops at each observed failur
 flat in between, so it follows the data without imposing any parameters on it:
 
 >>> from assetlife.lifetime_models import KaplanMeier
->>> km = KaplanMeier(
-...     dataset["time"], event=dataset["event"], entry=dataset["entry"]
-... )
+>>> km = KaplanMeier(dataset)
 
 .. plot::
     :context: close-figs
@@ -79,9 +77,7 @@ flat in between, so it follows the data without imposing any parameters on it:
     >>> from assetlife.datasets import load_circuit_breaker
     >>> from assetlife.lifetime_models import KaplanMeier
     >>> dataset = load_circuit_breaker()
-    >>> km = KaplanMeier(
-    ...     dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ... )
+    >>> km = KaplanMeier(dataset)
     >>> _ = km.plot("sf", label="Kaplan-Meier")
     >>> _ = plt.xlabel("Time")
     >>> _ = plt.ylabel("Estimated survival function")
@@ -94,9 +90,7 @@ data, and ``get_params`` reads them back.
 The two fitted values are the Weibull ``shape`` and ``rate``.
 
 >>> from assetlife.lifetime_models import Weibull
->>> weibull = Weibull().fit(
-...     dataset["time"], event=dataset["event"], entry=dataset["entry"]
-... )
+>>> weibull = Weibull().fit(dataset)
 >>> weibull.get_params()
 array([3.7267452 , 0.01232326])
 
@@ -113,12 +107,8 @@ the data more closely, see :doc:`unique_events/distributions`.
     >>> from assetlife.datasets import load_circuit_breaker
     >>> from assetlife.lifetime_models import KaplanMeier, Weibull
     >>> dataset = load_circuit_breaker()
-    >>> km = KaplanMeier(
-    ...     dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ... )
-    >>> weibull = Weibull().fit(
-    ...     dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ... )
+    >>> km = KaplanMeier(dataset)
+    >>> weibull = Weibull().fit(dataset)
     >>> timeline = np.arange(0, 145)
     >>> _ = km.plot("sf", label="Kaplan-Meier")
     >>> _ = weibull.plot("sf", timeline, label="Weibull")
@@ -227,9 +217,7 @@ AssetLife has no built-in plot for this, but the arrays go straight into `Matplo
     >>> from assetlife.lifetime_models import Weibull
     >>> from assetlife.policies import AgeReplacementPolicy
     >>> dataset = load_circuit_breaker()
-    >>> weibull = Weibull().fit(
-    ...     dataset["time"], event=dataset["event"], entry=dataset["entry"]
-    ... )
+    >>> weibull = Weibull().fit(dataset)
     >>> policy = AgeReplacementPolicy(weibull)
     >>> ar_star = policy.compute_optimal_ar(cf=11., cp=3., discounting_rate=0.04)
     >>> rng = np.random.default_rng(42)

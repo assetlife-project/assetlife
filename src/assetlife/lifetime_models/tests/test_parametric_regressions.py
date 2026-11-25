@@ -1,20 +1,26 @@
+import copy
+
 import numpy as np
+import polars as pl
 import pytest
 from numpy.testing import assert_allclose, assert_equal
-from optype.numpy import Array1D, ArrayND
+from optype.numpy import ArrayND
+from scipy.optimize import approx_fprime
 from scipy.stats import boxcox, zscore
 
 from .utils import generate_shapes, shape_id
+from assetlife._typing import CoercibleFloat64_ND
 from assetlife.lifetime_models import (
     ParametricAcceleratedFailureTime,
     ParametricProportionalHazard,
     Weibull,
 )
+from assetlife.lifetime_models._covar_effect import LinearCovarEffect
+from assetlife.lifetime_models._datasets_validation import validate_lifetime_data
+from assetlife.lifetime_models._likelihoods import LifetimeLikelihood
 from assetlife.lifetime_models._parametric_regressions import (
-    LinearCovarEffect,
     ParametricLifetimeRegression,
 )
-from assetlife.typing import CoercibleFloat64_ND
 
 type ST = int | float
 type NumpyST = np.floating | np.uint
@@ -190,21 +196,23 @@ def test_isf(
     )
 
 
-def test_fit(insulator_string_data: Array1D[np.void]) -> None:
-    covar_1 = zscore(boxcox(insulator_string_data["pHCl"])[0])
-    covar_2 = zscore(boxcox(insulator_string_data["pH2SO4"])[0])
-    covar_3 = zscore(boxcox(insulator_string_data["HNO3"])[0])
+def test_fit(insulator_string_data: pl.DataFrame) -> None:
+    covar_column_names = ["pHCl", "pH2SO4", "HNO3"]
+    # covariates normalized with a Box-Cox transform, then standardized
+    dataset = pl.DataFrame({
+        "time": insulator_string_data["time"],
+        "event": insulator_string_data["event"],
+        "entry": insulator_string_data["entry"],
+        **{
+            name: zscore(boxcox(insulator_string_data[name].to_numpy())[0])
+            for name in covar_column_names
+        },
+    })
     weibull_aft = ParametricAcceleratedFailureTime(Weibull()).fit(
-        insulator_string_data["time"],
-        covar=(covar_1, covar_2, covar_3),
-        event=insulator_string_data["event"],
-        entry=insulator_string_data["entry"],
+        dataset, covar_column_names
     )
     weibull_pph = ParametricProportionalHazard(Weibull()).fit(
-        insulator_string_data["time"],
-        covar=(covar_1, covar_2, covar_3),
-        event=insulator_string_data["event"],
-        entry=insulator_string_data["entry"],
+        dataset, covar_column_names
     )
 
     assert_allclose(
@@ -221,36 +229,31 @@ def test_fit(insulator_string_data: Array1D[np.void]) -> None:
 
 def test_negative_log(
     regression: ParametricLifetimeRegression,
-    insulator_string_data: Array1D[np.void],
+    insulator_string_data: pl.DataFrame,
 ) -> None:
-    likelihood = regression.init_likelihood(
-        insulator_string_data["time"],
-        args=(
-            insulator_string_data["pHCl"],
-            insulator_string_data["pH2SO4"],
-        ),
-        event=insulator_string_data["event"],
-        entry=insulator_string_data["entry"],
+    # a copy: from_model adapts the model to the covariates, in place
+    likelihood = LifetimeLikelihood.from_model(
+        copy.deepcopy(regression),
+        validate_lifetime_data(insulator_string_data, ["pHCl", "pH2SO4"]),
     )
-    params = likelihood.model.get_params()
-    assert isinstance(likelihood.negative_log(params), float)
+    assert isinstance(likelihood.negative_log(regression.get_params()), float)
 
 
 def test_jac_negative_log(
     regression: ParametricLifetimeRegression,
-    insulator_string_data: Array1D[np.void],
+    insulator_string_data: pl.DataFrame,
 ) -> None:
-    likelihood = regression.init_likelihood(
-        insulator_string_data["time"],
-        args=(
-            insulator_string_data["pHCl"],
-            insulator_string_data["pH2SO4"],
-        ),
-        event=insulator_string_data["event"],
-        entry=insulator_string_data["entry"],
+    likelihood = LifetimeLikelihood.from_model(
+        copy.deepcopy(regression),
+        validate_lifetime_data(insulator_string_data, ["pHCl", "pH2SO4"]),
     )
-    params = likelihood.model.get_params()
-    assert likelihood.jac_negative_log(params).shape == (params.size,)
+    # away from the optimum, where the gradient is not close to 0
+    params = 1.1 * regression.get_params()
+    assert_allclose(
+        likelihood.jac_negative_log(params),
+        approx_fprime(params, likelihood.negative_log, 1e-6 * params),
+        rtol=1e-3,
+    )
 
 
 @pytest.mark.parametrize(

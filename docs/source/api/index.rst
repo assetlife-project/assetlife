@@ -5,17 +5,6 @@ This section provides comprehensive details about the exposed AssetLife API.
 AssetLife is structured into different modules, each with a clear and specific role.
 We divided the API documentation close to the same logic.
 
-.. currentmodule:: assetlife.base
-
-.. autosummary::
-    :toctree: base_class
-    :template: class_template.rst
-    :caption: Base classes
-    :nosignatures:
-
-    ParametricModel
-    MaximumLikelihoodOptimizer
-
 Lifetime models
 ---------------
 
@@ -137,41 +126,4 @@ AssetLife offers few functions to sample data.
     ~sample_failures_from_nhpp
     ~sample_lifetimes_from_renewal_process
     ~sample_process
-
-Quadratures
------------
-
-Quadratures are used a many computations. We don't use Scipy quadrature implementations as, to our knowledge, they don't
-support automatic broadcasting of 2D bounds.
-
-.. currentmodule:: assetlife.quadratures
-
-.. autosummary::
-    :toctree: quadratures
-    :template: function_template.rst
-    :caption: Quadratures
-    :nosignatures:
-
-    ~legendre_quadrature
-    ~laguerre_quadrature
-    ~unweighted_laguerre_quadrature
-
-Typing
-------
-
-.. currentmodule:: assetlife.typing
-
-.. autosummary::
-    :toctree: typing
-    :template: data_template.rst
-    :caption: Typing
-    :nosignatures:
-
-    ~CovarTs
-    ~CoercibleFloat64_ND
-    ~CoercibleFloat64_1D
-    ~Float64_ND
-    ~Float64_1D
-    ~Timeline
-    ~Seed
 

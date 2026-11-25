@@ -10,7 +10,7 @@ The event might not have occurred when the study ends, monitoring starts after s
 have already been in service for a while, and dates are sometimes only approximately known.
 Any of these turns a simple "event at time :math:`t`" record into something less direct, and
 ignoring that distinction leads to systematically wrong estimates. AssetLife handles it
-through three arguments, ``time``, ``event`` and ``entry``.
+through three columns of the dataset, ``time``, ``event`` and ``entry``.
 
 The observation scheme
 -------------------------
@@ -36,7 +36,7 @@ calendar to show combinations that can occur:
 
 AssetLife's ``event``/``entry`` pair covers the two cases that dominate industrial asset data
 (right-censoring and left-truncation). The rarer cases, left-censoring (asset 2 above) and
-interval-censoring, are expressed by giving ``time`` as intervals instead of durations, see
+interval-censoring, are expressed by giving intervals instead of durations, see
 `Left censoring`_ and `Interval censoring`_.
 
 Right censoring
@@ -44,33 +44,36 @@ Right censoring
 
 An observation is **right-censored** when the actual event time is unknown: the event had
 not occurred yet the last time the asset was observed, so all we know is that its lifetime is
-*at least* ``time``. This is flagged with ``event=False``, while ``event=True`` means the
-event was observed at ``time``.
+*at least* ``time``. This is flagged with ``event`` set to ``False``, while ``True`` means
+the event was observed at ``time``.
 
 The ``load_power_transformer`` dataset (see :doc:`datasets`), where the event is a failure,
 has both kinds of rows:
 
+>>> import polars as pl
 >>> from assetlife.datasets import load_power_transformer
 >>> dataset = load_power_transformer()
->>> dataset[dataset["event"] & (dataset["entry"] == 0)][:2]  # observed failures
-array([(12.4,  True, 0.), (12.6,  True, 0.)],
-      dtype=[('time', '<f8'), ('event', '?'), ('entry', '<f8')])
->>> dataset[~dataset["event"] & (dataset["entry"] == 0)][:2]  # still in service at "time"
-array([(21.6, False, 0.), ( 4.2, False, 0.)],
-      dtype=[('time', '<f8'), ('event', '?'), ('entry', '<f8')])
+>>> dataset.columns
+['time', 'event', 'entry']
+>>> observed = dataset.filter(pl.col("event") & (pl.col("entry") == 0))
+>>> observed.head(2).rows()  # observed failures: (time, event, entry)
+[(12.4, True, 0.0), (12.6, True, 0.0)]
+>>> censored = dataset.filter(~pl.col("event") & (pl.col("entry") == 0))
+>>> censored.head(2).rows()  # still in service at "time"
+[(21.6, False, 0.0), (4.2, False, 0.0)]
 
 Left truncation
 -----------------
 
 An observation is **left-truncated** when the asset had already reached some age without the
 event occurring before it was observed. For instance, monitoring only started once a
-transformer had already been in service for a while. This is captured with the ``entry`` field:
+transformer had already been in service for a while. This is captured with the ``entry`` column:
 the age at which the asset entered observation (``entry=0`` if it was observed from the start
 of its lifetime).
 
->>> dataset[dataset["event"] & (dataset["entry"] > 0)][:2]
-array([(34.3,  True, 34.), (45.1,  True, 44.)],
-      dtype=[('time', '<f8'), ('event', '?'), ('entry', '<f8')])
+>>> truncated = dataset.filter(pl.col("event") & (pl.col("entry") > 0))
+>>> truncated.head(2).rows()
+[(34.3, True, 34.0), (45.1, True, 44.0)]
 
 Here, both transformers were already 34 and 44 (respectively) units old when they were
 first observed, and failed shortly after, at 34.3 and 45.1.
@@ -92,7 +95,7 @@ at which the failure was noticed.
 
 ``event`` cannot express this, since it only distinguishes "event at ``time``" from "no event
 yet at ``time``". A left-censored observation is written as an interval whose lower bound is
-the start of the asset's lifetime, ``[0., b]``, see `Interval censoring`_.
+the start of the asset's lifetime, ``[0, b]``, see `Interval censoring`_.
 
 Interval censoring
 --------------------
@@ -100,24 +103,31 @@ Interval censoring
 An observation is **interval-censored** when the event date is known to fall between two
 dates and no better than that, typically between two periodic inspections. Left censoring is
 the special case where the lower bound is the start of the asset's lifetime. Both are passed
-by giving ``time`` as a **two-column array** of interval bounds instead of a one-dimensional
-array of durations. Each row is then read as :math:`[a_i, b_i]`, the event being somewhere
-in between:
+by giving the interval bounds in two columns, ``time_inf`` and ``time_sup``, instead of a
+``time`` column. Each row is then read as :math:`[a_i, b_i]`, the event being somewhere in
+between, and ``event`` must not be given:
 
 .. list-table::
     :header-rows: 1
-    :widths: 30 70
+    :widths: 15 15 70
 
-    * - Row
+    * - ``time_inf``
+      - ``time_sup``
       - Meaning
-    * - ``[t, t]``
+    * - ``t``
+      - ``t``
       - event observed at ``t`` (complete observation)
-    * - ``[a, b]``
+    * - ``a``
+      - ``b``
       - event between ``a`` and ``b`` (interval censoring)
-    * - ``[0., b]``
+    * - ``0``
+      - ``b``
       - event before ``b``, exact date unknown (left censoring)
-    * - ``[a, np.inf]``
+    * - ``a``
+      - ``inf``
       - no event yet at ``a`` (right censoring)
+
+The ``entry`` column still holds left truncation values, as for durations.
 
 Why getting this right matters
 ---------------------------------
@@ -146,17 +156,17 @@ accounts for both directly in its likelihood.
 Fitting with censoring and truncation
 ---------------------------------------
 
-Both are passed to ``fit`` together: AssetLife builds the correct likelihood contribution for
-each row depending on its ``event``/``entry`` combination:
+Both are read by ``fit`` from the same dataset: AssetLife builds the correct likelihood
+contribution for each row depending on its ``event``/``entry`` combination:
 
 >>> from assetlife.lifetime_models import Weibull
->>> weibull = Weibull().fit(dataset["time"], event=dataset["event"], entry=dataset["entry"])
+>>> weibull = Weibull().fit(dataset)
 >>> weibull.get_params()
 array([3.46597396, 0.0122785 ])
 
 Dropping ``entry`` (i.e. ignoring the left truncation) changes the fitted parameters, since
 the model is then implicitly assuming every asset was observed from the start of its lifetime:
 
->>> weibull_no_truncation = Weibull().fit(dataset["time"], event=dataset["event"])
+>>> weibull_no_truncation = Weibull().fit(dataset.drop("entry"))
 >>> weibull_no_truncation.get_params()
 array([4.11911713, 0.0122451 ])
