@@ -1,6 +1,6 @@
 [project]
 name = "assetlife"
-version = "0.4.1"
+version = "0.5.0"
 description = "Python library leveraging stochastic modeling to guide decision-making in asset management"
 readme = "README.md"
 authors = [{ name = "Thomas Guillon et al." }]
@@ -12,7 +12,6 @@ dependencies = [
   "numpy>=2.4.6",
   "numpydoc>=1.10.0",
   "optype[numpy]>=0.17.1",
-  "pandas>=2.3.3",
   "polars>=2.1.0",
   "scipy>=1.17.1",
   "typing-extensions>=4.16.0",
