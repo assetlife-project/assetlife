@@ -62,18 +62,23 @@ SF6 refills of circuit breakers
 The insulating gas of a circuit breaker can leak. The breaker is then refilled and put back 
 into service without being rejuvenated. Unlike the three datasets above, this one is not made of 
 lifetimes but of **repair histories**: the same breaker can be refilled several times over its 
-observation window.
+observation window. It is loaded as two structured arrays, ``failures`` and ``assets``:
 
 >>> from assetlife.datasets import load_gas_refill_circuit_breaker
->>> dataset = load_gas_refill_circuit_breaker()
->>> dataset.dtype.names
-('id_Eq', 'first_age', 'last_age', 'age_at_repair')
->>> len(dataset)
-43520
+>>> failures, assets = load_gas_refill_circuit_breaker()
+>>> failures.dtype.names
+('id', 'time')
+>>> len(failures)
+14154
+>>> assets.dtype.names
+('id', 'start', 'end')
+>>> len(assets)
+35695
 
-- ``id_Eq``: the equipment id.
-- ``first_age`` and ``last_age``: the ages of the breaker at the beginning and at the end of its
-  observation window.
-- ``age_at_repair``: the age of the breaker at the refill.
+- ``failures`` has one row per refill: ``id`` is the breaker id and ``time`` its age at the
+  refill.
+- ``assets`` has one row per breaker, including those without any refill: ``start`` and ``end``
+  are the ages of the breaker at the beginning and at the end of its observation window.
 
-It is used to fit a non-homogeneous Poisson process (:doc:`stochastic_processes/nhpp`).
+These are the two tables used to fit a non-homogeneous Poisson process
+(:doc:`stochastic_processes/nhpp`).

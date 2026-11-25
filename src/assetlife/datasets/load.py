@@ -141,44 +141,57 @@ def load_circuit_breaker() -> NDArray[np.void]:
     return data.astype(new_dtype)
 
 
-def load_gas_refill_circuit_breaker() -> NDArray[np.void]:
+def load_gas_refill_circuit_breaker() -> tuple[NDArray[np.void], NDArray[np.void]]:
     r"""
     Load example dataset of SF6 refills on circuit breakers.
 
     Examples
     --------
     >>> from assetlife.datasets import load_gas_refill_circuit_breaker
-    >>> data = load_gas_refill_circuit_breaker()
-    >>> print(data["first_age"])
-    [34.  1. 42. ...  4.  4.  4.]
-    >>> print(data[3:7])
-    [(3, 42., 51.,    nan) (4, 42., 51., 43.088) (4, 42., 51., 47.37 )
-     (4, 42., 51., 49.325)]
+    >>> failures, assets = load_gas_refill_circuit_breaker()
+    >>> print(failures[:3])
+    [(4, 43.088) (4, 47.37 ) (4, 49.325)]
+    >>> print(assets[3:5])
+    [(3, 42., 51.) (4, 42., 51.)]
 
     Returns
     -------
-    structured array
-        A numpy structured array of 4 fields, with one row per refill, or a
-        single row for an equipment without any refill:
+    failures : structured array
+        A numpy structured array of 2 fields, with one row per refill:
 
-        - id_Eq (``np.int64``) : equipment id
-        - first_age (``np.float64``) : age at the beginning of the observation
+        - id (``np.int64``) : equipment id
+        - time (``np.float64``) : age at the refill
+    assets : structured array
+        A numpy structured array of 3 fields, with one row per equipment,
+        including those without any refill:
+
+        - id (``np.int64``) : equipment id
+        - start (``np.float64``) : age at the beginning of the observation
           window
-        - last_age (``np.float64``) : age at the end of the observation window
-        - age_at_repair (``np.float64``) : age at the refill, ``nan`` if the
-          equipment had no refill
+        - end (``np.float64``) : age at the end of the observation window
     """
 
     # genfromtxt, unlike loadtxt, reads the empty age_at_repair field of
     # equipments without refill as nan
-    return np.genfromtxt(
+    data = np.genfromtxt(
         Path(Path(__file__).parents[0], "csv/gas_refill_circuit_breaker.csv"),
         delimiter=",",
         skip_header=1,
         dtype=np.dtype([
-            ("id_Eq", np.int64),
-            ("first_age", np.float64),
-            ("last_age", np.float64),
-            ("age_at_repair", np.float64),
+            ("id", np.int64),
+            ("start", np.float64),
+            ("end", np.float64),
+            ("time", np.float64),
         ]),
+    )
+    # the observation window is repeated on every refill row of an equipment
+    _, first_rows = np.unique(data["id"], return_index=True)
+    assets = data[["id", "start", "end"]][first_rows]
+    failures = data[["id", "time"]][~np.isnan(data["time"])]
+    # multi-field indexing returns views with padded dtypes: repack them
+    return (
+        failures.astype(np.dtype([("id", np.int64), ("time", np.float64)])),
+        assets.astype(
+            np.dtype([("id", np.int64), ("start", np.float64), ("end", np.float64)])
+        ),
     )
