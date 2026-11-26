@@ -160,3 +160,109 @@ remain to pay. With discounting, the expected net present value accounts for it:
 array([1.875, 4.166, 8.982])
 
 The older the asset, the sooner its replacement, and the higher the cost in today's money.
+
+Planning the fleet
+------------------
+
+To estimate the maintenance workload, apply the optimal replacement age to the
+entire fleet of 35,695 breakers. Each breaker's current age is its age at the end
+of the observation period. Breakers already older than :math:`a_r^*` are overdue
+and replaced immediately, so their age is reset to zero:
+
+>>> ages = np.minimum(assets["end"].to_numpy(), ar_star)
+>>> int((assets["end"] >= ar_star).sum())
+2712
+
+The policy does not provide annual counts directly, but they can be derived
+from the cumulative intensity. Consider a breaker with current age :math:`a_0`,
+after applying the initial replacements. Its scheduled replacement dates are
+
+.. math::
+
+    a_r - a_0,\quad 2a_r - a_0,\quad 3a_r - a_0,\quad \dots
+
+where :math:`a_r = a_r^*`. Between replacements, the breaker follows the same
+failure process as a new asset, with its age reset to zero at each replacement.
+
+To calculate the expected number of repairs over the next :math:`t` years,
+count the completed cycles and the elapsed time in the current cycle:
+
+.. math::
+
+    k \Lambda(a_r)
+    + \Lambda\big((a_0 + t) \bmod a_r\big)
+    - \Lambda(a_0)
+
+where
+
+.. math::
+
+    k = \left\lfloor \frac{a_0 + t}{a_r} \right\rfloor
+
+is the number of completed cycles. Each completed cycle contributes
+:math:`\Lambda(a_r)` expected repairs. The last two terms account for repairs
+during the current cycle, subtracting the cumulative intensity accumulated
+before the observation period. In particular, the expected number of future
+repairs is zero at :math:`t=0`.
+
+Summing these quantities over the entire fleet gives the expected cumulative
+numbers of replacements and repairs at each year:
+
+>>> years = np.arange(0., 101.)[:, None]
+>>> replacements = np.clip(np.ceil((years - (ar_star - ages)) / ar_star), 0., None).sum(axis=1)
+>>> cycles = np.floor((ages + years) / ar_star)
+>>> repairs = (
+...     cycles * nhpp.cumulative_intensity(ar_star)
+...     + nhpp.cumulative_intensity((ages + years) % ar_star)
+...     - nhpp.cumulative_intensity(ages)
+... ).sum(axis=1)
+>>> annual_replacements, annual_repairs = np.diff(replacements), np.diff(repairs)
+>>> annual_replacements[:5]
+array([3267.,  729.,  884., 1206., 1628.])
+>>> np.round(annual_repairs[:5])
+array([1369., 1487., 1589., 1641., 1602.])
+
+The cumulative counts are evaluated at integer years, and their differences
+give the annual workload. Replacements occurring immediately at the start of
+the planning period are included in the first year.
+
+The first year concentrates the 2,712 overdue breakers, bringing the total to
+3,267 replacements. Subsequent replacements follow the current age
+distribution of the fleet, while the expected number of repairs stabilizes
+around 1,500 to 1,600 per year:
+
+.. plot::
+    :context: close-figs
+
+    >>> ages = np.minimum(assets["end"].to_numpy(), ar_star)
+    >>> years = np.arange(0., 101.)[:, None]
+    >>> replacements = np.clip(np.ceil((years - (ar_star - ages)) / ar_star), 0., None).sum(axis=1)
+    >>> cycles = np.floor((ages + years) / ar_star)
+    >>> repairs = (
+    ...     cycles * nhpp.cumulative_intensity(ar_star)
+    ...     + nhpp.cumulative_intensity((ages + years) % ar_star)
+    ...     - nhpp.cumulative_intensity(ages)
+    ... ).sum(axis=1)
+    >>> calendar = 2025 + years[:-1, 0]
+    >>> fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+    >>> _ = ax1.bar(
+    ...     calendar, np.diff(replacements), width=1., align="edge", color="C1",
+    ...     edgecolor="black", linewidth=0.3, label="preventive replacements",
+    ... )
+    >>> _ = ax1.set_ylabel("Replacements per year")
+    >>> _ = ax1.legend(loc="upper right")
+    >>> _ = ax2.bar(
+    ...     calendar, np.diff(repairs), width=1., align="edge", color="C0",
+    ...     edgecolor="black", linewidth=0.3, label=f"repairs, replaced at {ar_star:.1f} years",
+    ... )
+    >>> _ = ax2.set_xlabel("Year")
+    >>> _ = ax2.set_ylabel("Expected repairs per year")
+    >>> _ = ax2.legend(loc="upper right")
+    >>> plt.show()
+
+The replacement schedule is periodic: each breaker is replaced every
+:math:`a_r^*` years after its initial replacement. Consequently, the annual
+replacement pattern repeats every 48 years. The initial replacement wave
+therefore reappears after 48 years. Spreading overdue replacements over
+several years would smooth this initial peak and the subsequent replacement
+waves as well.
