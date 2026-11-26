@@ -2,11 +2,12 @@ Maintenance policies
 ====================
 
 A **maintenance policy** turns rewards into a decision. Every policy is built from a model 
-and exposes the same four cost methods. They are the methods of the underlying renewal reward 
-process but from two vocabularies. A renewal reward process uses the terms of probability 
-theory while a policy uses the financial terms. Each policy also comes in two variants: 
-a *renewal* one, where assets are replaced and a *one-cycle* one, which stops at the first
-replacement.
+and exposes the same four cost methods. For unique events, they are the methods of the
+underlying renewal reward process but from two vocabularies. A renewal reward process uses the
+terms of probability theory while a policy uses the financial terms. Unique event policies also
+come in two variants: a *renewal* one, where assets are replaced and a *one-cycle* one, which
+stops at the first replacement. Recurrent event policies are built on a non-homogeneous Poisson
+process instead.
 
 .. list-table::
     :header-rows: 1
@@ -27,3 +28,4 @@ replacement.
     :maxdepth: 1
 
     unique_events_policies
+    recurrent_events_policies
