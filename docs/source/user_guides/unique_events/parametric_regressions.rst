@@ -4,7 +4,7 @@ Parametric regressions
 A distribution alone can't account for the fact that different assets operate under
 different conditions. Regressions extend a baseline distribution with covariates: for
 instance, an insulator string's lifetime plausibly depends on the acid concentrations it's
-exposed to (see :doc:`datasets`).
+exposed to (see :doc:`../datasets`).
 
 Two parametric models
 ------------------------------------------

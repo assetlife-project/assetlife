@@ -15,8 +15,10 @@ User guides
     :numbered:
 
     getting_started
+    datasets
     unique_events/index
     stochastic_processes/index
+    maintenance_policies/index
     sampling
 
-Guides on the other stochastic processes and on maintenance policies are coming soon.
+Guides on the other stochastic processes are coming soon.

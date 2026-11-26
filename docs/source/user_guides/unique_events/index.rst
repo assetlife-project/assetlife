@@ -14,7 +14,6 @@ covariates.
 .. toctree::
     :maxdepth: 1
 
-    datasets
     censoring_and_truncation
     non_parametric_models
     distributions
