@@ -54,6 +54,35 @@ array([0.3345, 0.256 , 0.2337, 0.363 ])
 A small :math:`a_r` pays ``cp`` too often while a large one allows assets to experience more 
 repairs. In between lies a minimum that can be computed.
 
+Each replacement resets the intensity of the position to that of a new asset. With the 
+optimal age computed in the next section:
+
+.. plot::
+    :context: close-figs
+
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from assetlife.datasets import load_gas_refill_circuit_breaker
+    >>> from assetlife.lifetime_models import Gompertz
+    >>> from assetlife.policies import RecurrentEventAgeReplacementPolicy
+    >>> from assetlife.stochastic_processes import NonHomogeneousPoissonProcess
+    >>> failures, assets = load_gas_refill_circuit_breaker()
+    >>> failures, assets = pd.DataFrame(failures), pd.DataFrame(assets)
+    >>> nhpp = NonHomogeneousPoissonProcess(Gompertz()).fit(failures, assets)
+    >>> policy = RecurrentEventAgeReplacementPolicy(nhpp)
+    >>> ar_star = policy.compute_optimal_ar(cr=1., cp=10.)
+    >>> timeline = np.linspace(0., 150., 1001)
+    >>> _ = plt.plot(timeline, nhpp.intensity(timeline), "k--", label="never replaced")
+    >>> _ = plt.plot(
+    ...     timeline, nhpp.intensity(timeline % ar_star), label=f"replaced at {ar_star:.1f} years"
+    ... )
+    >>> _ = plt.ylim(0., 0.6)
+    >>> _ = plt.xlabel("Time")
+    >>> _ = plt.ylabel("Intensity of the position")
+    >>> _ = plt.legend()
+    >>> plt.show()
+
 Optimal age of replacement
 --------------------------
 
@@ -80,32 +109,26 @@ of the policy exactly at its minimum:
 .. plot::
     :context: close-figs
 
-    >>> import matplotlib.pyplot as plt
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> from assetlife.datasets import load_gas_refill_circuit_breaker
-    >>> from assetlife.lifetime_models import Gompertz
-    >>> from assetlife.policies import RecurrentEventAgeReplacementPolicy
-    >>> from assetlife.stochastic_processes import NonHomogeneousPoissonProcess
-    >>> failures, assets = load_gas_refill_circuit_breaker()
-    >>> failures, assets = pd.DataFrame(failures), pd.DataFrame(assets)
-    >>> nhpp = NonHomogeneousPoissonProcess(Gompertz()).fit(failures, assets)
-    >>> policy = RecurrentEventAgeReplacementPolicy(nhpp)
     >>> ar_range = np.linspace(20., 70., 100)
     >>> costs = policy.asymptotic_expected_equivalent_annual_cost(ar=ar_range, cr=1., cp=10.)
     >>> ar_star = policy.compute_optimal_ar(cr=1., cp=10.)
-    >>> _ = plt.plot(ar_range, costs, label="cost per unit of time of the policy")
-    >>> _ = plt.plot(ar_range, 1. * nhpp.intensity(ar_range), label="cr x intensity")
-    >>> _ = plt.axvline(ar_star, color="grey", linestyle=":", label="optimal ar")
+    >>> _ = plt.plot(
+    ...     ar_range, costs, label=r"$q^\infty(a_r)$: cost per unit of time, replacing at $a_r$"
+    ... )
+    >>> _ = plt.plot(
+    ...     ar_range, 1. * nhpp.intensity(ar_range),
+    ...     label=r"$c_r \, \lambda(a)$: cost per unit of time of repairs at age $a$",
+    ... )
+    >>> _ = plt.axvline(ar_star, color="grey", linestyle=":", label=r"optimal $a_r^*$")
     >>> _ = plt.ylim(0., 1.)
-    >>> _ = plt.xlabel("Age")
+    >>> _ = plt.xlabel(r"Age of replacement $a_r$, or age $a$")
     >>> _ = plt.ylabel("Cost per unit of time")
     >>> _ = plt.legend()
     >>> plt.show()
 
 The method takes a ``discounting_rate`` as well (see
 :doc:`../stochastic_processes/renewal_reward_process`). Discounting makes the replacement, paid
-at the end of the cycle, count less:
+at the end of the cycle, count less, so the optimum is postponed:
 
 >>> ar_disc = policy.compute_optimal_ar(cr=1., cp=10., discounting_rate=0.04)
 >>> round(float(ar_disc), 2)
@@ -115,21 +138,9 @@ at the end of the cycle, count less:
 ... ), 4)
 array([0.075])
 
-Each replacement also resets the intensity of the position to that of a new asset:
-
-.. plot::
-    :context: close-figs
-
-    >>> timeline = np.linspace(0., 150., 1001)
-    >>> _ = plt.plot(timeline, nhpp.intensity(timeline), "k--", label="never replaced")
-    >>> _ = plt.plot(
-    ...     timeline, nhpp.intensity(timeline % ar_star), label=f"replaced at {ar_star:.1f} years"
-    ... )
-    >>> _ = plt.ylim(0., 0.6)
-    >>> _ = plt.xlabel("Time")
-    >>> _ = plt.ylabel("Intensity of the position")
-    >>> _ = plt.legend()
-    >>> plt.show()
+The optimal age goes from 48.22 to 51.91 years. The cost, 0.075, is an equivalent annual cost in
+today's money: costs paid decades from now are discounted, so it cannot be directly compared with 
+the 0.2321 obtained without discounting.
 
 .. note::
 
