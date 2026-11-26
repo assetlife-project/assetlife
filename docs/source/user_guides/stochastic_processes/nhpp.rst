@@ -88,6 +88,11 @@ BIC           : 50412.8
 
 The Gompertz intensity, :math:`c \lambda e^{\lambda t}`, fits better.
 
+The intensity can also depend on covariates: add them as columns of ``assets`` and pass their
+names to ``fit`` with ``covariates=[...]``, the process being then built on a :doc:`parametric
+regression <../unique_events/parametric_regressions>` such as
+``ParametricProportionalHazard(Gompertz())``.
+
 The intensity
 -------------
 
