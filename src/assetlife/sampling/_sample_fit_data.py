@@ -8,10 +8,10 @@ import polars as pl
 from optype.numpy import Array1D
 
 from ._iterables import RenewalProcessIterable
-from assetlife._typing import CoercibleFloat64_1D, Seed
+from assetlife._typing import CoercibleFloat64_1D, Float64_ND, Seed
 from assetlife.lifetime_models import LifetimeDistribution, ParametricLifetimeRegression
 from assetlife.lifetime_models._distributions import Exponential
-from assetlife.stochastic_processes import RenewalProcess
+from assetlife.stochastic_processes import GammaProcess, RenewalProcess
 
 
 class LifetimeFitArgs(NamedTuple):
@@ -222,3 +222,27 @@ def sample_failures_from_nhpp(  # ruff: ignore[too-many-arguments, too-many-posi
     })
 
     return failures, assets
+
+
+# WORK IN PROGRESS
+# Refacto once GammaProcess Data format is settled
+# Currently, uses abstact numpy array format
+def sample_increments_from_gamma_process(
+    gamma_process: GammaProcess,
+    inspection_times: CoercibleFloat64_1D,
+    nb_samples: int,
+    seed: Seed = None,
+) -> Float64_ND:
+    rng = np.random.default_rng(seed)
+    inspection_times_add_0 = np.stack(
+        [np.array([0]), np.float64(inspection_times)], axis=0
+    )
+    time_increments_shape = np.diff(
+        gamma_process.shape_function(inspection_times_add_0)
+    )
+    rate = gamma_process.get_params()[0]
+    return rng.gamma(
+        shape=time_increments_shape,
+        scale=1 / rate,
+        size=(nb_samples, time_increments_shape.size),
+    )
