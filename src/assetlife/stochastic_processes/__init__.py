@@ -14,6 +14,7 @@ from ._renewal_processes import (
     RenewalProcess,
     RenewalRewardProcess,
 )
+from ._gamma_processes import GammaProcess
 
 __all__ = [
     "FrozenKijima1Process",
@@ -24,4 +25,5 @@ __all__ = [
     "NonHomogeneousPoissonProcess",
     "RenewalProcess",
     "RenewalRewardProcess",
+    "GammaProcess"
 ]
