@@ -1,5 +1,6 @@
 """Stochastic process models."""
 
+from ._gamma_processes import GammaProcess
 from ._kijima_processes import (
     FrozenKijima1Process,
     FrozenKijima2Process,
@@ -14,16 +15,15 @@ from ._renewal_processes import (
     RenewalProcess,
     RenewalRewardProcess,
 )
-from ._gamma_processes import GammaProcess
 
 __all__ = [
     "FrozenKijima1Process",
     "FrozenKijima2Process",
     "FrozenNonHomogeneousPoissonProcess",
+    "GammaProcess",
     "Kijima1Process",
     "Kijima2Process",
     "NonHomogeneousPoissonProcess",
     "RenewalProcess",
     "RenewalRewardProcess",
-    "GammaProcess"
 ]
